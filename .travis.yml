@@ -31,24 +31,31 @@ matrix:
   - rust: beta
   - rust: nightly
 sudo: required
-before_install:
-  - docker --version
+before_install: |
+  if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+    docker --version
+    docker pull ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION
+    docker run --rm -it -v "$(pwd)":/home/rust/src -v "$(pwd)/.cargo.cache/git":/home/rust/.cargo/git /home/rust/src ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/git
+    docker run --rm -it -v "$(pwd)":/home/rust/src -v "$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/registry
+  fi
 script: |
   BASE_DIR=$(pwd)
   for function in $FUNCTIONS; do
     cd $BASE_DIR/$function
-    cargo test --verbose --all
+    echo "+++ Building with $TRAVIS_RUST_VERSION" &&
+    cargo test --verbose --all &&
+    echo "+++ done."
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      echo "+++ Building static musl version with $TRAVIS_RUST_VERSION" &&
+      docker run --rm -it -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
+      echo "+++ done."
+    fi
   done
   cd $BASE_DIR
 after_success: |
   BASE_DIR=$(pwd)
   for function in $FUNCTIONS; do
     cd $BASE_DIR/$function
-    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      echo "+++ Building static musl version with $TRAVIS_RUST_VERSION" &&
-      docker run --rm -it -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
-      echo "+++ done."
-    fi
     if [[ "$TRAVIS_OS_NAME" == "linux" && "$CODECOV" ]]; then
       echo "+++ Checking code coverage" &&
       apt-get install libcurl4-openssl-dev libelf-dev libdw-dev cmake gcc binutils-dev libiberty-dev &&
