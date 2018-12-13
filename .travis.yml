@@ -32,7 +32,7 @@ script: |
   for function in $FUNCTIONS; do
     cd $function
     cargo test --verbose --all
-    cd BASE_DIR
+    cd $BASE_DIR
   done
 after_success: |
   BASE_DIR=`pwd`
@@ -61,6 +61,6 @@ after_success: |
       echo "Uploaded code coverage." &&
       echo "+++ done"
     fi
-    cd BASE_DIR
+    cd $BASE_DIR
   done
 
