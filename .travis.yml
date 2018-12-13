@@ -16,6 +16,16 @@ matrix:
     rust: stable
     services:
     - docker
+    addons:
+      apt:
+        packages:
+        - libcurl4-openssl-dev
+        - libelf-dev
+        - libdw-dev
+        - cmake
+        - gcc
+        - binutils-dev
+        - libiberty-dev
   - env: TARGET=x86_64-apple-darwin
     rust: stable
     os: osx
@@ -37,8 +47,8 @@ before_install: |
     BASE_DIR=$(pwd)
     docker --version
     docker pull ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION
-    docker run --rm -it "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/git
-    docker run --rm -it "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/registry
+    docker run --rm -it -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/git
+    docker run --rm -it -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/registry
     echo "+++ done."
   fi
 script: |
@@ -50,7 +60,7 @@ script: |
     echo "+++ done."
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       echo "+++ Building static musl version with $TRAVIS_RUST_VERSION" &&
-      docker run --rm -it -v "$(pwd)":/home/rust/src "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
+      docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
       echo "+++ done."
     fi
   done
@@ -61,7 +71,6 @@ after_success: |
     cd $BASE_DIR/$function
     if [[ "$TRAVIS_OS_NAME" == "linux" && "$CODECOV" ]]; then
       echo "+++ Checking code coverage" &&
-      sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev cmake gcc binutils-dev libiberty-dev &&
       wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
       tar xzf master.tar.gz &&
       cd kcov-master &&
