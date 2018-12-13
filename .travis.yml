@@ -49,20 +49,20 @@ before_install: |
     docker pull ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION
     docker run --rm -it -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/git
     docker run --rm -it -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/registry
-    echo "+++ done."
+    echo "+++ Preparing Docker: done."
   fi
 script: |
   BASE_DIR=$(pwd)
   for function in $FUNCTIONS; do
     cd $BASE_DIR/$function
-    echo "+++ Building with $TRAVIS_RUST_VERSION" &&
-    cargo test --verbose --all &&
-    echo "+++ done."
+    echo "+++ Building with $TRAVIS_RUST_VERSION"
+    cargo test --verbose --all
+    echo "+++ Building with $TRAVIS_RUST_VERSION: done."
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       echo "+++ Building static musl version with $TRAVIS_RUST_VERSION" &&
       docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/src/target &&
       docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
-      echo "+++ done."
+      echo "+++ Building static musl version with $TRAVIS_RUST_VERSION: done."
     fi
   done
   cd $BASE_DIR
@@ -85,7 +85,7 @@ after_success: |
       for file in target/debug/watch_autoscaling-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
       bash <(curl -s https://codecov.io/bash) &&
       echo "Uploaded code coverage." &&
-      echo "+++ done"
+      echo "+++ Checking code coverage: done."
     fi
   done
   cd $BASE_DIR
