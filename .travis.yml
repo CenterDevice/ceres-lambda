@@ -33,10 +33,13 @@ matrix:
 sudo: required
 before_install: |
   if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+    echo "+++ Preparing Docker"
+    BASE_DIR=$(pwd)
     docker --version
     docker pull ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION
-    docker run --rm -it -v "$(pwd)":/home/rust/src -v "$(pwd)/.cargo.cache/git":/home/rust/.cargo/git /home/rust/src ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/git
-    docker run --rm -it -v "$(pwd)":/home/rust/src -v "$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/registry
+    docker run --rm -it "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/git
+    docker run --rm -it "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/.cargo/registry
+    echo "+++ done."
   fi
 script: |
   BASE_DIR=$(pwd)
@@ -47,7 +50,7 @@ script: |
     echo "+++ done."
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       echo "+++ Building static musl version with $TRAVIS_RUST_VERSION" &&
-      docker run --rm -it -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
+      docker run --rm -it -v "$(pwd)":/home/rust/src "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
       echo "+++ done."
     fi
   done
