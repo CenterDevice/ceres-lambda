@@ -60,6 +60,7 @@ script: |
     echo "+++ done."
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       echo "+++ Building static musl version with $TRAVIS_RUST_VERSION" &&
+      docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/src/target &&
       docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
       echo "+++ done."
     fi
@@ -81,7 +82,7 @@ after_success: |
       make install DESTDIR=../../kcov-build &&
       cd ../.. &&
       rm -rf kcov-master &&
-      for file in target/debug/ceres-*[^\.d] target/debug/it_*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
+      for file in target/debug/watch_autoscaling-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
       bash <(curl -s https://codecov.io/bash) &&
       echo "Uploaded code coverage." &&
       echo "+++ done"
