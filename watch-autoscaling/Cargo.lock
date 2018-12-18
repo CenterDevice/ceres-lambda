@@ -152,7 +152,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "ceres-watch-autoscaling"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aws_lambda_events 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
