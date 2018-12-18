@@ -120,13 +120,10 @@ fn handler(input: Value, ctx: &Context) -> Result<(), Error> {
     i_have_been_invoked(invocation_counter, ctx);
 
     let env_config = EnvConfig::from_env()?;
-    debug!("Loaded environment variables configuration = {:?}.", env_config);
     let encrypted_config = EncryptedFunctionConfig::from_file(&env_config.config_file)
         // This map_err seems necessary since error_chain::Error is not Send + 'static
         .map_err(|e| WatchAutoscalingError::FailedConfig(e.to_string()))?;
-    debug!("Loaded encrypted configuration from file {:?}.", &env_config.config_file);
     let config = encrypted_config.decrypt()?;
-    debug!("Decrypted encrypted configuration.");
     if invocation_counter == 0 {
         let res = init(&config);
         if let Err(ref e) = res {
@@ -134,6 +131,9 @@ fn handler(input: Value, ctx: &Context) -> Result<(), Error> {
         };
         res?
     }
+    debug!("Loaded environment variables configuration = {:?}.", &env_config);
+    debug!("Loaded encrypted configuration from file {:?}.", &env_config.config_file);
+    debug!("Decrypted encrypted configuration.");
     info!("Invocation initialization complete.");
 
     let bosun = BosunClient::new(config.bosun.uri().as_str(), 3);
