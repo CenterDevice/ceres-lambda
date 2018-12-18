@@ -17,11 +17,12 @@ test:
 run:
 	cargo run
 
-
 .cargo.cache/git:
+	mkdir -p $@
 	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/git
 
 .cargo.cache/registry:
+	mkdir -p $@
 	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/registry
 
 cross_compile: target/x86_64-unknown-linux-musl/release/bootstrap

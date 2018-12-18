@@ -6,7 +6,7 @@ use clams::config::Config;
 use failure::{Error, Fail};
 use lambda_runtime::{error::HandlerError, Context};
 use log::{debug, info};
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use serde_json::{self, Value};
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
@@ -14,6 +14,8 @@ mod asg_mapping;
 pub mod config;
 mod bosun;
 mod kms;
+
+static FAILED_LAMBDA_RESULT: &str= r#"{ "exit_code": 1, "error_msg": "Failed to serialize json for LambdaResult" }"#;
 
 static METRIC_ASG_UP_DOWN: &str = "aws.ec2.asg.scaling.event";
 static METRIC_LAMBDA_INVOCATION_COUNT: &str = "aws.lambda.function.invocation.count";
@@ -61,9 +63,48 @@ pub fn lambda_handler(input: Value, ctx: Context) -> Result<(), HandlerError> {
         Ok(_) => eprintln!("Successfully executed, request_id={}.", ctx.aws_request_id),
         Err(ref e) => eprintln!("Failed to execute, request_id={} because {}.", ctx.aws_request_id, e),
     };
+    let lambda_result = match res {
+        Ok(ref details) => {
+            LambdaResult::from_ctx(&ctx, None, Some(details))
+        }
+        Err(ref e) => {
+            LambdaResult::from_ctx(&ctx, Some(e.to_string()), None)
+        }
+    };
+    log_lambda_result_safe(&lambda_result);
 
     res
         .map_err(|e| ctx.new_error(e.to_string().as_str()))
+}
+
+fn log_lambda_result_safe<T: serde::Serialize>(lambda_result: &LambdaResult<T>) {
+    let json = serde_json::to_string(lambda_result)
+        .unwrap_or_else(|_| FAILED_LAMBDA_RESULT.to_string());
+
+    println!("lambda result = {}", json);
+}
+
+#[derive(Debug, Serialize)]
+pub struct LambdaResult<'a, T> {
+    function_name: &'a str,
+    function_version: &'a str,
+    aws_request_id: &'a str,
+    exit_code: usize,
+    error_msg: Option<String>,
+    details: Option<&'a T>,
+}
+
+impl<'a, T> LambdaResult<'a, T> {
+    pub fn from_ctx(ctx: &'a Context, error_msg: Option<String>, details: Option<&'a T>) -> LambdaResult<'a, T> {
+        LambdaResult {
+            function_name: &ctx.function_name,
+            function_version: &ctx.function_version,
+            aws_request_id: &ctx.aws_request_id,
+            exit_code: if error_msg.is_none() {0} else {1},
+            error_msg,
+            details,
+        }
+    }
 }
 
 fn handler(input: Value, ctx: &Context) -> Result<(), Error> {
