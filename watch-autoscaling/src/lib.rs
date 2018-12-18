@@ -92,6 +92,10 @@ pub struct LambdaResult<'a, T> {
     exit_code: usize,
     error_msg: Option<String>,
     details: Option<&'a T>,
+    git_commit_sha: &'a str,
+    git_commit_date: &'a str,
+    version: &'a str,
+    build_timestamp: &'a str,
 }
 
 impl<'a, T> LambdaResult<'a, T> {
@@ -103,16 +107,17 @@ impl<'a, T> LambdaResult<'a, T> {
             exit_code: if error_msg.is_none() {0} else {1},
             error_msg,
             details,
+            git_commit_sha: env!("VERGEN_SHA_SHORT"),
+            git_commit_date:  env!("VERGEN_COMMIT_DATE"),
+            version: env!("CARGO_PKG_VERSION"),
+            build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
         }
     }
 }
 
 fn handler(input: Value, ctx: &Context) -> Result<(), Error> {
     let invocation_counter = INVOCATION_COUNTER.fetch_add(1, Ordering::SeqCst);
-    eprintln!(
-        "I've been invoked ({}); function={}, version={}, request_id={}.",
-        invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id,
-    );
+    i_have_been_invoked(invocation_counter, ctx);
 
     let env_config = EnvConfig::from_env()?;
     debug!("Loaded environment variables configuration = {:?}.", env_config);
@@ -135,6 +140,13 @@ fn handler(input: Value, ctx: &Context) -> Result<(), Error> {
     debug!("Created Bosun client.");
 
     do_handler(input, ctx, &config, &bosun)
+}
+
+fn i_have_been_invoked(invocation_counter: usize, ctx: &Context) {
+    eprintln!(
+        "I've been invoked ({}); function={}, lambda version={}, request_id={}, git commit sha={}, git commit date={}, version={}, build timestamp={}.",
+        invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id, env!("VERGEN_SHA_SHORT"), env!("VERGEN_COMMIT_DATE"), env!("CARGO_PKG_VERSION"), env!("VERGEN_BUILD_TIMESTAMP")
+    );
 }
 
 /// The purpose of this function is to run once per instance of this function
@@ -354,6 +366,13 @@ mod tests {
         INIT.call_once(|| {
             env_logger::init();
         });
+    }
+
+    #[test]
+    fn test_i_have_been_invoked() {
+        let ctx = Context::default();
+        let invocation_counter = 0;
+        i_have_been_invoked(invocation_counter, &ctx);
     }
 
     #[test]

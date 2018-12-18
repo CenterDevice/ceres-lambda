@@ -19,15 +19,15 @@ run:
 
 .cargo.cache/git:
 	mkdir -p $@
-	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/git
+	docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/git
 
 .cargo.cache/registry:
 	mkdir -p $@
-	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/registry
+	docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/registry
 
 cross_compile: target/x86_64-unknown-linux-musl/release/bootstrap
 target/x86_64-unknown-linux-musl/release/bootstrap:	.cargo.cache/git .cargo.cache/registry
-	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) cargo build --release
+	docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) /bin/sh -c "cd watch-autoscaling; cargo build --release"
 
 
 upgrade: upgrade-docker-images

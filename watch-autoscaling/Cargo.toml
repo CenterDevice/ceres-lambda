@@ -1,7 +1,8 @@
 [package]
 name = "ceres-watch-autoscaling"
 version = "0.1.0"
-authors = ["Lukas Pustina <lukas@pustina.net>"]
+authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
+build = "build.rs"
 
 edition = "2018"
 
@@ -39,6 +40,9 @@ toml = "0.4"
 
 [dev-dependencies]
 spectral = "^0.6"
+
+[build-dependencies]
+vergen = "3"
 
 # Enable Debug Symbols in Release build
 #[profile.release]
