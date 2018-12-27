@@ -50,7 +50,7 @@ impl<'a, T> LambdaResult<'a, T> where T: serde::Serialize {
 pub fn log_invocation(invocation_counter: usize, ctx: &Context) {
     eprintln!(
         "I've been invoked ({}); function={}, lambda version={}, request_id={}, git commit sha={}, git commit date={}, version={}, build timestamp={}.",
-        invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id, env!("VERGEN_SHA_SHORT"), env!("VERGEN_COMMIT_DATE"), env!("CARGO_PKG_VERSION"), env!("VERGEN_BUILD_TIMESTAMP")
+        invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id, env!("VERGEN_SHA_SHORT"), env!("VERGEN_COMMIT_DATE"), env!("VERGEN_SEMVER_LIGHTWEIGHT"), env!("VERGEN_BUILD_TIMESTAMP")
     );
 }
 
