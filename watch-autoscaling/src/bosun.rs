@@ -65,7 +65,10 @@ impl Bosun for BosunClient {
     fn emit_datum(&self, datum: &Datum) -> BosunResult {
         let timeout = 5u64;
 
-        let encoded = datum.to_json()?;
+        let mut internal_datum: InternalDatum = datum.into();
+        internal_datum.add_tags(&self.default_tags);
+
+        let encoded = internal_datum.to_json()?;
         let res = BosunClient::send_to_bosun_api(&self.host, "/api/put", &encoded, timeout, StatusCode::NO_CONTENT);
         info!(
             "Sent datum '{:?}' to '{:?}' with result: '{:?}'.",
@@ -92,10 +95,15 @@ impl Bosun for BosunClient {
 impl BosunClient {
     /// Creates a new BosunClient.
     pub fn new(host: &str, timeout: u64) -> BosunClient {
+        Self::with_tags(host, timeout, Tags::new())
+    }
+
+    /// Creates a new BosunClient with default tags
+    pub fn with_tags(host: &str, timeout: u64, default_tags: Tags) -> BosunClient {
         BosunClient {
             host: host.to_string(),
             timeout,
-            default_tags: HashMap::new(),
+            default_tags,
         }
     }
 
@@ -254,6 +262,53 @@ pub fn now_in_ms() -> i64 {
     now.timestamp() * 1000 + (now.nanosecond() / 1_000_000) as i64
 }
 
+
+/// Represents a metric datum used solely for internal purpose, i.e., adding default tags and
+/// sending the datum.
+#[derive(Debug, Serialize)]
+struct InternalDatum<'a> {
+    /// Metric name
+    pub metric: &'a str,
+    /// Unix timestamp in either _s_ or _ms_
+    pub timestamp: i64,
+    /// Value as string representation
+    pub value: &'a str,
+    /// Tags for this metric datum
+    pub tags: HashMap<&'a str, &'a str>,
+}
+
+impl<'a> From<&'a Datum<'a>> for InternalDatum<'a> {
+    fn from(datum: &'a Datum<'a>) -> InternalDatum<'a> {
+        let mut tags = HashMap::new();
+        for (k,v) in datum.tags {
+            tags.insert(k.as_ref(),v.as_ref());
+        }
+        InternalDatum {
+            metric: datum.metric,
+            timestamp: datum.timestamp,
+            value: datum.value,
+            tags,
+        }
+    }
+}
+
+impl<'a> InternalDatum<'a> {
+    fn add_tags(&mut self, tags: &'a Tags) {
+        for (k,v) in tags {
+            self.tags.insert(k.as_ref(),v.as_ref());
+        }
+    }
+
+    pub fn to_json(&self) -> Result<String, BosunError> {
+        let json = serde_json::to_string(&self)
+            //TODO: Use context to carry original error on
+            .map_err(|_| BosunError::JsonParseError)?;
+        debug!("InternalDatum::to_json '{:?}', '{:?}'.", &self, json);
+
+        Ok(json)
+    }
+}
+
 #[derive(Debug, Serialize)]
 /* cf. https://github.com/bosun-monitor/bosun/blob/master/models/silence.go#L12. 28.11.2018
     Start, End time.Time
@@ -365,3 +420,43 @@ pub mod testing {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use spectral::prelude::*;
+
+    #[test]
+    fn to_internal_datum() {
+        let mut default_tags = Tags::new();
+        default_tags.insert("default_tag1".to_string(), "value1".to_string());
+        let mut tags = Tags::new();
+        tags.insert("tag2".to_string(), "value2".to_string());
+        tags.insert("tag3".to_string(), "value3".to_string());
+        let datum = Datum::now("a_test_metric", "42", &tags);
+
+        let mut internal_datum: InternalDatum = (&datum).into();
+        internal_datum.add_tags(&default_tags);
+
+        assert_that(&internal_datum.tags).has_length(3);
+    }
+
+    #[test]
+    fn to_json() {
+        let mut default_tags = Tags::new();
+        default_tags.insert("default_tag1".to_string(), "value1".to_string());
+        let tags = Tags::new();
+        let datum = Datum::new("a_test_metric", 1545918681110, "42", &tags);
+        let mut internal_datum: InternalDatum = (&datum).into();
+        internal_datum.add_tags(&default_tags);
+
+        let expected =
+            r#"{"metric":"a_test_metric","timestamp":1545918681110,"value":"42","tags":{"default_tag1":"value1"}}"#.to_string();
+
+        let json = internal_datum.to_json();
+
+        assert_that(&json).is_ok().is_equal_to(&expected);
+    }
+}
+
