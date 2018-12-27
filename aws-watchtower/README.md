@@ -1,4 +1,4 @@
-# Watch-Autoscaling
+# AWS-Watchtower
 
 
 ## Configuration
@@ -10,6 +10,12 @@
 host = '<Bosun host:Bosun port>'
 user = '<Basic Auth user name'
 password = '<Basic Auth password | KMS encrypted and base64 encoded'
+timeout = 3
+
+[bosun.tags]
+iaas_name = 'aws'
+iaas_account = 'staging'
+iaas_env = 'staging'
 
 # ASG Mappings is a list. So multiple items are allowed.
 [[asg_mappings.mapping]]

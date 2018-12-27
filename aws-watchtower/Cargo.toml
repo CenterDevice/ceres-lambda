@@ -1,5 +1,5 @@
 [package]
-name = "ceres-watch-autoscaling"
+name = "aws-watchtower"
 version = "0.1.1"
 authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
 build = "build.rs"
@@ -15,7 +15,7 @@ name = "validate-config"
 path = "src/bin/validate-config.rs"
 
 [lib]
-name = "watch_autoscaling"
+name = "aws_watchtower"
 path = "src/lib.rs"
 
 [dependencies]

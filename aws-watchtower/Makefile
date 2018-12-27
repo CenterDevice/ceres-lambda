@@ -27,7 +27,7 @@ run:
 
 cross_compile: target/x86_64-unknown-linux-musl/release/bootstrap
 target/x86_64-unknown-linux-musl/release/bootstrap:	.cargo.cache/git .cargo.cache/registry
-	docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) /bin/sh -c "cd watch-autoscaling; cargo build --release"
+	docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) /bin/sh -c "cd aws-watchtower; cargo build --release"
 
 
 upgrade: upgrade-docker-images

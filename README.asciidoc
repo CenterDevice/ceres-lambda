@@ -5,5 +5,5 @@ image:https://travis-ci.org/centerdevice/ceres-lambda.svg?branch=master[link="ht
 
 == Functions
 
-* `watch-autoscaling` -- Reacts on AWS EC2 Autoscaling Group lifecycle events and in case of instance terminations sets corresponding silences in Bosun to avoid unknown alerts.
+* `aws-watchtower` -- Reacts on AWS Cloudwatch Events like AWS EC2 Autoscaling Group lifecycle events and in case of instance terminations sets corresponding silences in Bosun to avoid unknown alerts.
 

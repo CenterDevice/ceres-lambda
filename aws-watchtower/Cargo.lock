@@ -52,6 +52,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-watchtower"
+version = "0.1.1"
+dependencies = [
+ "aws_lambda_events 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "base64 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clams 0.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clams-derive 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure_derive 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lambda_runtime 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "reqwest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_core 0.35.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_kms 0.35.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.80 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.80 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spectral 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vergen 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "aws_lambda_events"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -149,32 +175,6 @@ dependencies = [
 name = "cc"
 version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "ceres-watch-autoscaling"
-version = "0.1.1"
-dependencies = [
- "aws_lambda_events 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "base64 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "clams 0.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "clams-derive 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "env_logger 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure_derive 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "lambda_runtime 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "reqwest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusoto_core 0.35.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusoto_kms 0.35.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.80 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.80 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
- "spectral 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "vergen 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "cfg-if"

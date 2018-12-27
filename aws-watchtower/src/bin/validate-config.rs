@@ -1,4 +1,4 @@
-use watch_autoscaling::config::EncryptedFunctionConfig;
+use aws_watchtower::config::EncryptedFunctionConfig;
 
 use clams::config::Config;
 use structopt::StructOpt;
