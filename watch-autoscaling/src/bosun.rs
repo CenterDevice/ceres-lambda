@@ -24,6 +24,9 @@ pub enum BosunError {
     ReceiveError(String),
 }
 
+/// Metric tags equivalent to Rust's `HashMap<String, String>`
+pub type Tags = HashMap<String, String>;
+
 /// Encapsulates Bosun server connection.
 #[derive(Debug)]
 pub struct BosunClient {
@@ -31,6 +34,7 @@ pub struct BosunClient {
     pub host: String,
     /// Timeout for http request connection
     pub timeout: u64,
+    pub default_tags: Tags,
 }
 
 pub trait Bosun {
@@ -60,6 +64,7 @@ impl Bosun for BosunClient {
 
     fn emit_datum(&self, datum: &Datum) -> BosunResult {
         let timeout = 5u64;
+
         let encoded = datum.to_json()?;
         let res = BosunClient::send_to_bosun_api(&self.host, "/api/put", &encoded, timeout, StatusCode::NO_CONTENT);
         info!(
@@ -90,6 +95,7 @@ impl BosunClient {
         BosunClient {
             host: host.to_string(),
             timeout,
+            default_tags: HashMap::new(),
         }
     }
 
@@ -187,9 +193,6 @@ impl<'a> Metadata<'a> {
         Ok(json)
     }
 }
-
-/// Metric tags equivalent to Rust's `HashMap<String, String>`
-pub type Tags = HashMap<String, String>;
 
 /// Represents a metric datum.
 #[derive(Debug, Serialize)]
