@@ -7,6 +7,10 @@ use serde_json;
 use std::collections::HashMap;
 use std::time::Duration;
 
+pub static METRIC_ASG_UP_DOWN: &str = "aws.ec2.asg.scaling.event";
+pub static METRIC_LAMBDA_INVOCATION_COUNT: &str = "aws.lambda.function.invocation.count";
+pub static METRIC_LAMBDA_INVOCATION_RESULT: &str = "aws.lambda.function.invocation.result";
+
 /// Result of an attempt to send meta data or a metric datum
 pub type BosunResult = Result<(), BosunError>;
 
