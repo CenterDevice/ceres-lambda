@@ -136,7 +136,11 @@ fn handler(input: Value, ctx: &Context) -> Result<(), Error> {
     debug!("Decrypted encrypted configuration.");
     info!("Invocation initialization complete.");
 
-    let bosun = BosunClient::with_tags(config.bosun.uri().as_str(), 3, config.bosun.tags.clone());
+    let bosun = BosunClient::with_tags(
+        config.bosun.uri().as_str(),
+        config.bosun.timeout.unwrap_or(3),
+        config.bosun.tags.clone()
+    );
     debug!("Created Bosun client.");
 
     do_handler(input, ctx, &config, &bosun)

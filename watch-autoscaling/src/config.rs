@@ -37,6 +37,7 @@ pub struct Bosun {
     pub host: String,
     pub user: String,
     pub password: String,
+    pub timeout: Option<u64>,
     pub tags: HashMap<String, String>,
 }
 
@@ -61,6 +62,7 @@ impl Default for FunctionConfig {
             host: "localhost:8070".to_string(),
             user: "bosun".to_string(),
             password: "bosun".to_string(),
+            timeout: Some(5),
             tags: HashMap::new(),
         };
 
@@ -117,6 +119,7 @@ r#"[bosun]
 host = 'localhost:8070'
 user = 'bosun'
 password = 'bosun'
+timeout = 5
 
 [bosun.tags]
 tag1 = 'value1'

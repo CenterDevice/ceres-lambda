@@ -45,13 +45,12 @@ pub trait Bosun {
 
 impl Bosun for BosunClient {
     fn emit_metadata(&self, metadata: &Metadata) -> BosunResult {
-        let timeout = 5u64;
         let encoded = metadata.to_json()?;
         let res = BosunClient::send_to_bosun_api(
             &self.host,
             "/api/metadata/put",
             &encoded,
-            timeout,
+            self.timeout,
             StatusCode::NO_CONTENT,
         );
         info!(
@@ -63,13 +62,12 @@ impl Bosun for BosunClient {
     }
 
     fn emit_datum(&self, datum: &Datum) -> BosunResult {
-        let timeout = 5u64;
 
         let mut internal_datum: InternalDatum = datum.into();
         internal_datum.add_tags(&self.default_tags);
 
         let encoded = internal_datum.to_json()?;
-        let res = BosunClient::send_to_bosun_api(&self.host, "/api/put", &encoded, timeout, StatusCode::NO_CONTENT);
+        let res = BosunClient::send_to_bosun_api(&self.host, "/api/put", &encoded, self.timeout, StatusCode::NO_CONTENT);
         info!(
             "Sent datum '{:?}' to '{:?}' with result: '{:?}'.",
             encoded, &self.host, res
@@ -79,11 +77,10 @@ impl Bosun for BosunClient {
     }
 
     fn set_silence(&self, silence: &Silence) -> BosunResult {
-        let timeout = 5u64;
         let json = serde_json::to_string(silence)
             //TODO: Use context to carry original error on
             .map_err(|_| BosunError::JsonParseError)?;
-        let res = BosunClient::send_to_bosun_api(&self.host, "/api/silence/set", &json, timeout, StatusCode::OK);
+        let res = BosunClient::send_to_bosun_api(&self.host, "/api/silence/set", &json, self.timeout, StatusCode::OK);
         info!(
             "Set silence '{:?}' at '{:?}' with result: '{:?}'.",
             json, &self.host, res
