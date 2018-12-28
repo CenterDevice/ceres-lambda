@@ -1,5 +1,5 @@
 use crate::asg_mapping::Mappings;
-use crate::kms;
+use crate::aws::kms;
 use crate::WatchAutoscalingError;
 
 use clams::config::*;

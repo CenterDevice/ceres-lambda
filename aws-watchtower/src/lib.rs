@@ -14,7 +14,7 @@ pub mod config;
 pub mod error;
 mod events;
 mod init;
-mod kms;
+mod aws;
 mod lambda;
 
 // Use a counter, in case we want to track how often the function gets called before getting cold
