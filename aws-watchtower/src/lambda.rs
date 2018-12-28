@@ -11,7 +11,8 @@ pub struct LambdaResult<'a, T> {
     details: Option<&'a T>,
     git_commit_sha: &'a str,
     git_commit_date: &'a str,
-    version: &'a str,
+    git_version: &'a str,
+    cargo_version: &'a str,
     build_timestamp: &'a str,
 }
 
@@ -29,7 +30,8 @@ where
             details,
             git_commit_sha: env!("VERGEN_SHA_SHORT"),
             git_commit_date: env!("VERGEN_COMMIT_DATE"),
-            version: env!("CARGO_PKG_VERSION"),
+            git_version: env!("VERGEN_SEMVER_LIGHTWEIGHT"),
+            cargo_version: env!("CARGO_PKG_VERSION"),
             build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
         }
     }
@@ -52,8 +54,9 @@ where
 
 pub fn log_invocation(invocation_counter: usize, ctx: &Context) {
     eprintln!(
-        "I've been invoked ({}); function={}, lambda version={}, request_id={}, git commit sha={}, git commit date={}, version={}, build timestamp={}.",
-        invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id, env!("VERGEN_SHA_SHORT"), env!("VERGEN_COMMIT_DATE"), env!("VERGEN_SEMVER_LIGHTWEIGHT"), env!("VERGEN_BUILD_TIMESTAMP")
+        "I've been invoked ({}); function={}, lambda version={}, request_id={}, git commit sha={}, git commit date={}, git version={}, cargo version={}, build timestamp={}.",
+        invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id, env!("VERGEN_SHA_SHORT"), env!("VERGEN_COMMIT_DATE"), env!("VERGEN_SEMVER_LIGHTWEIGHT"), env!("CARGO_PKG_VERSION"),
+ env!("VERGEN_BUILD_TIMESTAMP")
     );
 }
 
