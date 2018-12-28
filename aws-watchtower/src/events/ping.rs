@@ -32,7 +32,7 @@ mod tests {
         setup();
 
         let event = json!(
-            { "ping": "echo request" }
+            { "source": "ping", "ping": "echo request" }
         );
 
         let parsed = serde_json::from_value(event);

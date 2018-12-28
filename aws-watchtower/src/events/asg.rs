@@ -5,9 +5,31 @@ use crate::error::WatchAutoscalingError;
 use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
+use serde_derive::{Deserialize, Serialize};
 use serde_json;
 
-pub use aws_lambda_events::event::autoscaling::AutoScalingEvent;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AutoScalingEvent {
+    pub version: String,
+    pub id: String,
+    #[serde(rename = "detail-type")]
+    pub detail_type: String,
+    pub account: String,
+    pub time: String,
+    pub region: String,
+    pub resources: Vec<String>,
+    pub detail: AutoScalingEventDetail,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AutoScalingEventDetail {
+    #[serde(rename = "RequestId")]
+    pub request_id: String,
+    #[serde(rename = "AutoScalingGroupName")]
+    pub auto_scaling_group_name: String,
+    #[serde(rename = "EC2InstanceId")]
+    pub ec2_instance_id: String,
+}
 
 #[derive(Debug)]
 pub enum AsgLifeCycleEvent<'a> {
@@ -30,12 +52,7 @@ pub struct TerminationDetails<'a> {
 
 impl<'a> AsgLifeCycleEvent<'a> {
     pub fn try_from(asg: &'a AutoScalingEvent) -> Result<AsgLifeCycleEvent<'a>, Error> {
-        let detail_type = asg
-            .detail_type
-            .as_ref()
-            .ok_or_else(|| Error::from(WatchAutoscalingError::NoDetailType))?;
-
-        match detail_type.as_str() {
+        match asg.detail_type.as_str() {
             "EC2 Instance Launch Successful" => {
                 let details = AsgLifeCycleEvent::lifecycle_details_from(asg)?;
                 Ok(AsgLifeCycleEvent::SuccessfulLaunch(details))
@@ -54,34 +71,19 @@ impl<'a> AsgLifeCycleEvent<'a> {
     }
 
     fn lifecycle_details_from(asg: &'a AutoScalingEvent) -> Result<LifeCycleDetails<'a>, Error> {
-        let auto_scaling_group_name = asg
-            .detail
-            .get("AutoScalingGroupName")
-            .and_then(|x| x.as_str())
-            .ok_or_else(|| Error::from(WatchAutoscalingError::NoAutoScalingGroupName))?;
-
         let details = LifeCycleDetails {
-            auto_scaling_group_name,
+            auto_scaling_group_name: &asg.detail.auto_scaling_group_name,
         };
+
         Ok(details)
     }
 
     fn successful_termination_from(asg: &'a AutoScalingEvent) -> Result<AsgLifeCycleEvent<'a>, Error> {
-        let instance_id = asg
-            .detail
-            .get("EC2InstanceId")
-            .and_then(|x| x.as_str())
-            .ok_or_else(|| Error::from(WatchAutoscalingError::NoInstanceId))?;
-        let auto_scaling_group_name = asg
-            .detail
-            .get("AutoScalingGroupName")
-            .and_then(|x| x.as_str())
-            .ok_or_else(|| Error::from(WatchAutoscalingError::NoAutoScalingGroupName))?;
-
         let details = TerminationDetails {
-            instance_id,
-            auto_scaling_group_name,
+            instance_id: &asg.detail.ec2_instance_id,
+            auto_scaling_group_name: &asg.detail.auto_scaling_group_name,
         };
+
         Ok(AsgLifeCycleEvent::SuccessfulTermination(details))
     }
 }
@@ -146,34 +148,26 @@ mod tests {
 
     use chrono::offset::Utc;
     use env_logger;
-    use serde_json::Value;
     use spectral::prelude::*;
-    use std::collections::HashMap;
 
     fn setup() {
         crate::testing::setup();
     }
 
     fn asg_success_full_termination_event() -> AutoScalingEvent {
-        let mut detail = HashMap::new();
-        detail.insert(
-            "EC2InstanceId".to_string(),
-            Value::String("i-1234567890abcdef0".to_string()),
-        );
-        detail.insert(
-            "AutoScalingGroupName".to_string(),
-            Value::String("my-auto-scaling-group".to_string()),
-        );
         let asg = AutoScalingEvent {
-            version: Some("0".to_string()),
-            id: Some("12345678-1234-1234-1234-123456789012".to_string()),
-            detail_type: Some("EC2 Instance Terminate Successful".to_string()),
-            source: Some("aws.autoscaling".to_string()),
-            account_id: Some("123456789012".to_string()),
-            time: Utc::now(),
-            region: Some("us-west-2".to_string()),
+            version: "0".to_string(),
+            id: "12345678-1234-1234-1234-123456789012".to_string(),
+            detail_type: "EC2 Instance Terminate Successful".to_string(),
+            account: "123456789012".to_string(),
+            time: Utc::now().to_string(),
+            region: "us-west-2".to_string(),
             resources: vec!["auto-scaling-group-arn".to_string(), "instance-arn".to_string()],
-            detail,
+            detail: AutoScalingEventDetail {
+                request_id: "12345678-1234-1234-1234-123456789012".to_string(),
+                ec2_instance_id: "i-1234567890abcdef0".to_string(),
+                auto_scaling_group_name: "my-auto-scaling-group".to_string(),
+            }
         };
         asg
     }

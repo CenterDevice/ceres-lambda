@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 pub static METRIC_ASG_UP_DOWN: &str = "aws.ec2.asg.scaling.event";
+pub static METRIC_EBS_VOLUME_EVENT: &str = "aws.ec2.ebs.volume.change.event";
+pub static METRIC_EBS_VOLUME_CREATION_RESULT: &str = "aws.ec2.ebs.volume.creation.result";
 pub static METRIC_LAMBDA_INVOCATION_COUNT: &str = "aws.lambda.function.invocation.count";
 pub static METRIC_LAMBDA_INVOCATION_RESULT: &str = "aws.lambda.function.invocation.result";
 

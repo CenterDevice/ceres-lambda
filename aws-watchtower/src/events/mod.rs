@@ -8,12 +8,17 @@ use serde_derive::Deserialize;
 use serde_json::{self, Value};
 
 pub mod asg;
+pub mod ebs;
 pub mod ping;
 
 #[derive(Debug, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "source")]
 pub enum Event {
-    ASG(asg::AutoScalingEvent),
+    #[serde(rename = "aws.autoscaling")]
+    Asg(asg::AutoScalingEvent),
+    #[serde(rename = "aws.ec2")]
+    Ebs(ebs::VolumeEvent),
+    #[serde(rename = "ping")]
     Ping(ping::Ping),
 }
 
@@ -48,8 +53,9 @@ fn parse_event(json: Value) -> Result<Event, Error> {
 
 fn handle_event<T: Bosun>(event: Event, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<(), Error> {
     match event {
+        Event::Asg(asg) => asg::handle(asg, &ctx, &config, bosun),
+        Event::Ebs(ebs) => ebs::handle(ebs, &ctx, &config, bosun),
         Event::Ping(ping) => ping::handle(ping, &ctx, &config, bosun),
-        Event::ASG(asg) => asg::handle(asg, &ctx, &config, bosun),
     }
 }
 
@@ -57,16 +63,13 @@ fn handle_event<T: Bosun>(event: Event, ctx: &Context, config: &FunctionConfig, 
 mod tests {
     use super::*;
 
-    use super::asg::AutoScalingEvent;
     use crate::asg_mapping::{Mapping, Mappings};
     use crate::bosun::testing::{BosunCallStats, BosunMockClient};
     use crate::testing::setup;
 
-    use chrono::offset::Utc;
     use env_logger;
-    use serde_json::{json, Value};
+    use serde_json::json;
     use spectral::prelude::*;
-    use std::collections::HashMap;
 
     #[test]
     fn test_handle_ping() {
@@ -76,7 +79,7 @@ mod tests {
         let ctx = Context::default();
         let config = FunctionConfig::default();
         let event = json!(
-            { "ping": "echo request" }
+            { "source": "ping", "ping": "echo request" }
         );
         let expected = BosunCallStats::new(0, 2, 0);
 
@@ -104,8 +107,36 @@ mod tests {
                 host_prefix: "my-server-".to_string(),
             }],
         };
-        let asg_event = asg_success_full_termination_event();
-        let event = serde_json::to_value(asg_event).unwrap();
+        let asg_event = r#"{
+  "version": "0",
+  "id": "12345678-1234-1234-1234-123456789012",
+  "detail-type": "EC2 Instance Terminate Successful",
+  "source": "aws.autoscaling",
+  "account": "123456789012",
+  "time": "yyyy-mm-ddThh:mm:ssZ",
+  "region": "us-west-2",
+  "resources": [
+    "auto-scaling-group-arn",
+    "instance-arn"
+  ],
+  "detail": {
+      "StatusCode": "InProgress",
+      "Description": "Terminating EC2 instance: i-12345678",
+      "AutoScalingGroupName": "my-auto-scaling-group",
+      "ActivityId": "87654321-4321-4321-4321-210987654321",
+      "Details": {
+          "Availability Zone": "us-west-2b",
+          "Subnet ID": "subnet-12345678"
+      },
+      "RequestId": "12345678-1234-1234-1234-123456789012",
+      "StatusMessage": "",
+      "EndTime": "yyyy-mm-ddThh:mm:ssZ",
+      "EC2InstanceId": "i-1234567890abcdef0",
+      "StartTime": "yyyy-mm-ddThh:mm:ssZ",
+      "Cause": "description-text"
+  }
+}"#;
+        let event = serde_json::from_str(&asg_event).unwrap();
         let expected = BosunCallStats::new(0, 3, 1);
 
         let res = handle(event, &ctx, &config, &bosun);
@@ -116,29 +147,5 @@ mod tests {
             .that(&bosun_stats)
             .named("actual calls")
             .is_equal_to(&expected);
-    }
-
-    fn asg_success_full_termination_event() -> AutoScalingEvent {
-        let mut detail = HashMap::new();
-        detail.insert(
-            "EC2InstanceId".to_string(),
-            Value::String("i-1234567890abcdef0".to_string()),
-        );
-        detail.insert(
-            "AutoScalingGroupName".to_string(),
-            Value::String("my-auto-scaling-group".to_string()),
-        );
-        let asg = AutoScalingEvent {
-            version: Some("0".to_string()),
-            id: Some("12345678-1234-1234-1234-123456789012".to_string()),
-            detail_type: Some("EC2 Instance Terminate Successful".to_string()),
-            source: Some("aws.autoscaling".to_string()),
-            account_id: Some("123456789012".to_string()),
-            time: Utc::now(),
-            region: Some("us-west-2".to_string()),
-            resources: vec!["auto-scaling-group-arn".to_string(), "instance-arn".to_string()],
-            detail,
-        };
-        asg
     }
 }

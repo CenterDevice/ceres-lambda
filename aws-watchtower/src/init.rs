@@ -51,6 +51,22 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     bosun.emit_metadata(&metadata)?;
 
     let metadata = Metadata::new(
+        bosun::METRIC_EBS_VOLUME_EVENT,
+        "rate",
+        "Change",
+        "Creation or deletion of EBS volumes [-1 = deletion, +1 = creation]",
+    );
+    bosun.emit_metadata(&metadata)?;
+
+    let metadata = Metadata::new(
+        bosun::METRIC_EBS_VOLUME_CREATION_RESULT,
+        "gauge",
+        "Result",
+        "Creation result of EBS volumes [0 = success, 1 = failure]",
+    );
+    bosun.emit_metadata(&metadata)?;
+
+    let metadata = Metadata::new(
         bosun::METRIC_LAMBDA_INVOCATION_COUNT,
         "rate",
         "Invocations",
