@@ -59,7 +59,7 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     bosun.emit_metadata(&metadata)?;
 
     let metadata = Metadata::new(
-        bosun::METRIC_LAMBDA_INVOCATION_COUNT,
+        bosun::METRIC_LAMBDA_INVOCATION_RESULT,
         "gauge",
         "Result",
         "AWS Lambda function invocation result code [0 = success, >0 = failure]",
