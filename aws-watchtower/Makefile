@@ -36,7 +36,10 @@ upgrade-docker-images:
 	docker pull $(DOCKER_BUILD_IMAGE)
 
 
-clean:
+clean: clean-local clean-cross
+clean-local:
 	cargo clean
+
+clean-cross:
 	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) cargo clean
 
