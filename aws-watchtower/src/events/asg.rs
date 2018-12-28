@@ -94,7 +94,7 @@ pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionCon
         AsgLifeCycleEvent::UnsuccessfulTermination(ref x) => (x.auto_scaling_group_name, 0),
     };
 
-    let mapping = config.asg_mappings.map(asg_name);
+    let mapping = config.asg.mappings.map(asg_name);
     info!("Mapped ASG to '{:?}'.", mapping);
 
     let mut tags = Tags::new();
@@ -107,22 +107,21 @@ pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionCon
     bosun.emit_datum(&datum)?;
 
     if let AsgLifeCycleEvent::SuccessfulTermination(ref details) = event {
-        set_bosun_silence(details, mapping, bosun)?
+        set_bosun_silence(details, &config.asg.scaledown_silence_duration, mapping, bosun)?
     };
 
     Ok(())
 }
 
-fn set_bosun_silence(details: &TerminationDetails, mapping: Option<&Mapping>, bosun: &Bosun) -> Result<(), Error> {
+fn set_bosun_silence(details: &TerminationDetails, duration: &str, mapping: Option<&Mapping>, bosun: &Bosun) -> Result<(), Error> {
     let host_prefix = mapping
         .map(|x| &x.host_prefix)
         .ok_or_else(|| Error::from(WatchAutoscalingError::NoHostMappingFound(details.auto_scaling_group_name.to_string())))?;
 
     let host = format!("{}{}*", &host_prefix, details.instance_id);
-    info!("Setting silence for host '{}'.", host);
+    info!("Setting silence of {} for host '{}'.", duration, host);
 
-    // TODO: Make 24h a Duration and configurable
-    let silence = Silence::host(&host, "24h");
+    let silence = Silence::host(&host, duration);
     bosun.set_silence(&silence)?;
 
     Ok(())

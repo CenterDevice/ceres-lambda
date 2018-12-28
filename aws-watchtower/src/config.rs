@@ -11,7 +11,7 @@ use std::collections::HashMap;
 #[derive(Config, PartialEq, Deserialize, Serialize, Debug)]
 pub struct EncryptedFunctionConfig {
     pub bosun: Bosun,
-    pub asg_mappings: Mappings,
+    pub asg: Asg,
 }
 
 impl EncryptedFunctionConfig {
@@ -25,7 +25,7 @@ impl EncryptedFunctionConfig {
 
         let config = FunctionConfig {
             bosun,
-            asg_mappings: self.asg_mappings,
+            asg: self.asg,
         };
 
         Ok(config)
@@ -51,9 +51,15 @@ impl Bosun {
 }
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
+pub struct Asg {
+    pub scaledown_silence_duration: String,
+    pub mappings: Mappings,
+}
+
+#[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct FunctionConfig {
     pub bosun: Bosun,
-    pub asg_mappings: Mappings,
+    pub asg: Asg,
 }
 
 impl Default for FunctionConfig {
@@ -66,13 +72,16 @@ impl Default for FunctionConfig {
             tags: HashMap::new(),
         };
 
-        let asg_mappings = Mappings {
-            items: Vec::new(),
+        let asg = Asg {
+            scaledown_silence_duration: "24h".to_string(),
+            mappings: Mappings {
+                items: Vec::new(),
+            }
         };
 
         FunctionConfig {
             bosun,
-            asg_mappings,
+            asg,
         }
     }
 }
@@ -125,12 +134,15 @@ timeout = 5
 tag1 = 'value1'
 tag2 = 'value2'
 
-[[asg_mappings.mapping]]
+[asg]
+scaledown_silence_duration = "24h"
+
+[[asg.mappings.mapping]]
 search = 'webserver'
 tag_name = 'webserver'
 host_prefix = 'webserver-'
 
-[[asg_mappings.mapping]]
+[[asg.mappings.mapping]]
 search = 'import'
 tag_name = 'import'
 host_prefix = 'import-'
@@ -144,7 +156,7 @@ host_prefix = 'import-'
                 Mapping { search: "import".to_string(), tag_name: "import".to_string(), host_prefix: "import-".to_string() },
             ],
         };
-        expected.asg_mappings = asg_mappings;
+        expected.asg.mappings = asg_mappings;
 
         let config: Result<FunctionConfig, _> = toml::from_str(&toml);
 

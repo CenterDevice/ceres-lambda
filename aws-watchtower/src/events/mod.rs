@@ -95,7 +95,7 @@ mod tests {
         let bosun: BosunMockClient = Default::default();
         let ctx = Context::default();
         let mut config = FunctionConfig::default();
-        config.asg_mappings = Mappings {
+        config.asg.mappings = Mappings {
             items: vec![
                 Mapping { search: "my".to_string(), tag_name: "my".to_string(), host_prefix: "my-server-".to_string() },
             ],
