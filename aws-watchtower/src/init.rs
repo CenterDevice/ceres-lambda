@@ -1,4 +1,4 @@
-use crate::bosun::{self, BosunClient, Bosun, Metadata};
+use crate::bosun::{self, Bosun, BosunClient, Metadata};
 use crate::config::{EncryptedFunctionConfig, EnvConfig, FunctionConfig};
 use crate::error::WatchAutoscalingError;
 use clams::config::Config;
@@ -6,7 +6,7 @@ use failure::Error;
 use lambda_runtime::Context;
 use lazy_static;
 use log::debug;
-use serde_json::{self, Value};
+use serde_json;
 
 pub fn log() {
     env_logger::init();
@@ -20,7 +20,10 @@ pub fn config() -> Result<FunctionConfig, Error> {
     let encrypted_config = EncryptedFunctionConfig::from_file(&env_config.config_file)
         // This map_err seems necessary since error_chain::Error is not Send + 'static
         .map_err(|e| WatchAutoscalingError::FailedConfig(e.to_string()))?;
-    debug!("Loaded encrypted configuration from file {:?}.", &env_config.config_file);
+    debug!(
+        "Loaded encrypted configuration from file {:?}.",
+        &env_config.config_file
+    );
     let config = encrypted_config.decrypt()?;
     debug!("Decrypted encrypted configuration.");
 
@@ -32,11 +35,7 @@ pub fn bosun(config: &FunctionConfig, ctx: &Context) -> Result<impl Bosun, Error
     tags.insert("host".to_string(), "lambda".to_string());
     tags.insert("function_name".to_string(), ctx.function_name.to_string());
 
-    let bosun = BosunClient::with_tags(
-        config.bosun.uri().as_str(),
-        config.bosun.timeout.unwrap_or(3),
-        tags,
-    );
+    let bosun = BosunClient::with_tags(config.bosun.uri().as_str(), config.bosun.timeout.unwrap_or(3), tags);
 
     debug!("Initialized bosun.");
     Ok(bosun)
@@ -70,5 +69,3 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     debug!("Initialized bosun metrics.");
     Ok(())
 }
-
-

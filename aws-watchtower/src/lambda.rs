@@ -15,17 +15,20 @@ pub struct LambdaResult<'a, T> {
     build_timestamp: &'a str,
 }
 
-impl<'a, T> LambdaResult<'a, T> where T: serde::Serialize {
+impl<'a, T> LambdaResult<'a, T>
+where
+    T: serde::Serialize,
+{
     pub fn from_ctx(ctx: &'a Context, error_msg: Option<String>, details: Option<&'a T>) -> LambdaResult<'a, T> {
         LambdaResult {
             function_name: &ctx.function_name,
             function_version: &ctx.function_version,
             aws_request_id: &ctx.aws_request_id,
-            exit_code: if error_msg.is_none() {0} else {1},
+            exit_code: if error_msg.is_none() { 0 } else { 1 },
             error_msg,
             details,
             git_commit_sha: env!("VERGEN_SHA_SHORT"),
-            git_commit_date:  env!("VERGEN_COMMIT_DATE"),
+            git_commit_date: env!("VERGEN_COMMIT_DATE"),
             version: env!("CARGO_PKG_VERSION"),
             build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
         }
@@ -39,9 +42,9 @@ impl<'a, T> LambdaResult<'a, T> where T: serde::Serialize {
     }
 
     pub fn log_json(&self) {
-        static FAILED_LAMBDA_RESULT: &str= r#"{ "exit_code": 1, "error_msg": "Failed to serialize json for LambdaResult" }"#;
-        let json = serde_json::to_string(self)
-            .unwrap_or_else(|_| FAILED_LAMBDA_RESULT.to_string());
+        static FAILED_LAMBDA_RESULT: &str =
+            r#"{ "exit_code": 1, "error_msg": "Failed to serialize json for LambdaResult" }"#;
+        let json = serde_json::to_string(self).unwrap_or_else(|_| FAILED_LAMBDA_RESULT.to_string());
 
         println!("lambda result = {}", json);
     }
@@ -53,7 +56,6 @@ pub fn log_invocation(invocation_counter: usize, ctx: &Context) {
         invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id, env!("VERGEN_SHA_SHORT"), env!("VERGEN_COMMIT_DATE"), env!("VERGEN_SEMVER_LIGHTWEIGHT"), env!("VERGEN_BUILD_TIMESTAMP")
     );
 }
-
 
 #[cfg(test)]
 mod tests {

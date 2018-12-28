@@ -66,12 +66,12 @@ impl Bosun for BosunClient {
     }
 
     fn emit_datum(&self, datum: &Datum) -> BosunResult {
-
         let mut internal_datum: InternalDatum = datum.into();
         internal_datum.add_tags(&self.default_tags);
 
         let encoded = internal_datum.to_json()?;
-        let res = BosunClient::send_to_bosun_api(&self.host, "/api/put", &encoded, self.timeout, StatusCode::NO_CONTENT);
+        let res =
+            BosunClient::send_to_bosun_api(&self.host, "/api/put", &encoded, self.timeout, StatusCode::NO_CONTENT);
         info!(
             "Sent datum '{:?}' to '{:?}' with result: '{:?}'.",
             encoded, &self.host, res
@@ -263,7 +263,6 @@ pub fn now_in_ms() -> i64 {
     now.timestamp() * 1000 + (now.nanosecond() / 1_000_000) as i64
 }
 
-
 /// Represents a metric datum used solely for internal purpose, i.e., adding default tags and
 /// sending the datum.
 #[derive(Debug, Serialize)]
@@ -281,8 +280,8 @@ struct InternalDatum<'a> {
 impl<'a> From<&'a Datum<'a>> for InternalDatum<'a> {
     fn from(datum: &'a Datum<'a>) -> InternalDatum<'a> {
         let mut tags = HashMap::new();
-        for (k,v) in datum.tags {
-            tags.insert(k.as_ref(),v.as_ref());
+        for (k, v) in datum.tags {
+            tags.insert(k.as_ref(), v.as_ref());
         }
         InternalDatum {
             metric: datum.metric,
@@ -295,8 +294,8 @@ impl<'a> From<&'a Datum<'a>> for InternalDatum<'a> {
 
 impl<'a> InternalDatum<'a> {
     fn add_tags(&mut self, tags: &'a Tags) {
-        for (k,v) in tags {
-            self.tags.insert(k.as_ref(),v.as_ref());
+        for (k, v) in tags {
+            self.tags.insert(k.as_ref(), v.as_ref());
         }
     }
 
@@ -356,7 +355,7 @@ pub mod testing {
 
     #[derive(PartialEq, Eq, Debug)]
     pub struct BosunMockClient {
-        pub stats: Rc<RefCell<HashMap<&'static str, u32>>>
+        pub stats: Rc<RefCell<HashMap<&'static str, u32>>>,
     }
 
     impl Default for BosunMockClient {
@@ -453,11 +452,11 @@ mod tests {
         internal_datum.add_tags(&default_tags);
 
         let expected =
-            r#"{"metric":"a_test_metric","timestamp":1545918681110,"value":"42","tags":{"default_tag1":"value1"}}"#.to_string();
+            r#"{"metric":"a_test_metric","timestamp":1545918681110,"value":"42","tags":{"default_tag1":"value1"}}"#
+                .to_string();
 
         let json = internal_datum.to_json();
 
         assert_that(&json).is_ok().is_equal_to(&expected);
     }
 }
-

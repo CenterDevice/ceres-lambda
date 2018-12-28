@@ -1,6 +1,6 @@
-use crate::WatchAutoscalingError;
 use crate::asg_mapping::Mappings;
 use crate::kms;
+use crate::WatchAutoscalingError;
 
 use clams::config::*;
 use clams_derive::Config;
@@ -20,13 +20,10 @@ impl EncryptedFunctionConfig {
 
         let bosun = Bosun {
             password: bosun_auth_password,
-            .. self.bosun
+            ..self.bosun
         };
 
-        let config = FunctionConfig {
-            bosun,
-            asg: self.asg,
-        };
+        let config = FunctionConfig { bosun, asg: self.asg };
 
         Ok(config)
     }
@@ -43,10 +40,7 @@ pub struct Bosun {
 
 impl Bosun {
     pub fn uri(&self) -> String {
-        format!(
-            "https://{}:{}@{}",
-            &self.user, &self.password, &self.host
-        )
+        format!("https://{}:{}@{}", &self.user, &self.password, &self.host)
     }
 }
 
@@ -74,15 +68,10 @@ impl Default for FunctionConfig {
 
         let asg = Asg {
             scaledown_silence_duration: "24h".to_string(),
-            mappings: Mappings {
-                items: Vec::new(),
-            }
+            mappings: Mappings { items: Vec::new() },
         };
 
-        FunctionConfig {
-            bosun,
-            asg,
-        }
+        FunctionConfig { bosun, asg }
     }
 }
 
@@ -96,13 +85,10 @@ impl EnvConfig {
         let config_file = std::env::var("CD_CONFIG_FILE")
             .map_err(|e| e.context(WatchAutoscalingError::FailedEnvVar("CD_CONFIG_FILE")))?;
 
-        let env_config = EnvConfig {
-            config_file,
-        };
+        let env_config = EnvConfig { config_file };
 
         Ok(env_config)
     }
-
 }
 
 impl Default for EnvConfig {
@@ -118,13 +104,12 @@ mod tests {
     use super::*;
     use crate::asg_mapping::Mapping;
 
-    use toml;
     use spectral::prelude::*;
+    use toml;
 
     #[test]
     fn deserialize_function_config() {
-        let toml =
-r#"[bosun]
+        let toml = r#"[bosun]
 host = 'localhost:8070'
 user = 'bosun'
 password = 'bosun'
@@ -152,14 +137,25 @@ host_prefix = 'import-'
         expected.bosun.tags.insert("tag2".to_string(), "value2".to_string());
         let asg_mappings = Mappings {
             items: vec![
-                Mapping { search: "webserver".to_string(), tag_name: "webserver".to_string(), host_prefix: "webserver-".to_string() },
-                Mapping { search: "import".to_string(), tag_name: "import".to_string(), host_prefix: "import-".to_string() },
+                Mapping {
+                    search: "webserver".to_string(),
+                    tag_name: "webserver".to_string(),
+                    host_prefix: "webserver-".to_string(),
+                },
+                Mapping {
+                    search: "import".to_string(),
+                    tag_name: "import".to_string(),
+                    host_prefix: "import-".to_string(),
+                },
             ],
         };
         expected.asg.mappings = asg_mappings;
 
         let config: Result<FunctionConfig, _> = toml::from_str(&toml);
 
-        asserting("function config loads successfully").that(&config).is_ok().is_equal_to(&expected);
+        asserting("function config loads successfully")
+            .that(&config)
+            .is_ok()
+            .is_equal_to(&expected);
     }
 }

@@ -1,8 +1,8 @@
 use aws_watchtower::config::EncryptedFunctionConfig;
 
 use clams::config::Config;
-use structopt::StructOpt;
 use std::path::PathBuf;
+use structopt::StructOpt;
 
 /// A basic example
 #[derive(StructOpt, Debug)]
@@ -20,18 +20,15 @@ struct Opt {
 fn main() {
     let args = Opt::from_args();
 
-    let enc_config = EncryptedFunctionConfig::from_file(args.file)
-        .expect("Failed to read encrypted config file");
+    let enc_config = EncryptedFunctionConfig::from_file(args.file).expect("Failed to read encrypted config file");
     if args.verbose > 1 {
         eprintln!("{:#?}", enc_config);
     }
 
-    let config = enc_config.decrypt()
-        .expect("Failed to decrypt encrypted config file");
+    let config = enc_config.decrypt().expect("Failed to decrypt encrypted config file");
     if args.verbose > 0 {
         eprintln!("{:#?}", config);
     }
 
     println!("Config okay.");
 }
-

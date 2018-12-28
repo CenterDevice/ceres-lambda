@@ -1,13 +1,11 @@
-use crate::bosun::{BosunClient, Bosun, Metadata};
-use crate::config::{EncryptedFunctionConfig, EnvConfig, FunctionConfig};
+use crate::config::FunctionConfig;
 use crate::error::WatchAutoscalingError;
 use crate::lambda::LambdaResult;
-use clams::config::Config;
 use failure::Error;
 use lambda_runtime::{error::HandlerError, Context};
 use lazy_static;
-use log::{debug, info};
-use serde_json::{self, Value};
+use log::info;
+use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
 mod asg_mapping;
@@ -29,8 +27,7 @@ lazy_static::lazy_static! {
 }
 
 pub fn lambda_handler(json: Value, ctx: Context) -> Result<(), HandlerError> {
-    run(json, &ctx)
-        .map_err(|e| ctx.new_error(e.to_string().as_str()))
+    run(json, &ctx).map_err(|e| ctx.new_error(e.to_string().as_str()))
 }
 
 fn run(json: Value, ctx: &Context) -> Result<(), Error> {
@@ -44,13 +41,11 @@ fn run(json: Value, ctx: &Context) -> Result<(), Error> {
     }
 
     // Run per each invocation
-    let bosun = init::bosun(&CONFIG, ctx)
-        .map_err(|e| ctx.new_error(e.to_string().as_str()))?;
+    let bosun = init::bosun(&CONFIG, ctx).map_err(|e| ctx.new_error(e.to_string().as_str()))?;
 
     // Only run once per instance of lambda function
     if invocation_counter == 0 {
-        init::bosun_metrics(&bosun)
-            .map_err(|e| ctx.new_error(e.to_string().as_str()))?;
+        init::bosun_metrics(&bosun).map_err(|e| ctx.new_error(e.to_string().as_str()))?;
     }
     info!("Initialization complete.");
 
@@ -64,12 +59,8 @@ fn run(json: Value, ctx: &Context) -> Result<(), Error> {
 
 fn log_result(res: &Result<(), Error>, ctx: &Context) {
     let lambda_result = match res {
-        Ok(ref details) => {
-            LambdaResult::from_ctx(ctx, None, Some(details))
-        }
-        Err(ref e) => {
-            LambdaResult::from_ctx(ctx, Some(e.to_string()), None)
-        }
+        Ok(ref details) => LambdaResult::from_ctx(ctx, None, Some(details)),
+        Err(ref e) => LambdaResult::from_ctx(ctx, Some(e.to_string()), None),
     };
     lambda_result.log_human();
     lambda_result.log_json();
@@ -88,4 +79,3 @@ mod testing {
         });
     }
 }
-

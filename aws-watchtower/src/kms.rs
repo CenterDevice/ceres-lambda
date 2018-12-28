@@ -6,7 +6,6 @@ use rusoto_kms::{DecryptError, DecryptRequest, Kms, KmsClient};
 use std::str;
 use std::time::Duration;
 
-
 #[derive(Debug, Fail)]
 enum KmsError {
     #[fail(display = "decryption failed ")]
@@ -16,8 +15,7 @@ enum KmsError {
 }
 
 pub fn decrypt_base64(base64_str: &str) -> Result<String, Error> {
-    do_decrypt_base64(base64_str)
-        .map_err(|e| e.context(KmsError::DecryptionFailed).into())
+    do_decrypt_base64(base64_str).map_err(|e| e.context(KmsError::DecryptionFailed).into())
 }
 
 fn do_decrypt_base64(base64_str: &str) -> Result<String, Error> {
@@ -52,4 +50,3 @@ fn do_decrypt_base64(base64_str: &str) -> Result<String, Error> {
 
     Ok(plaintext.to_string())
 }
-

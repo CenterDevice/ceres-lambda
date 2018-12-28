@@ -40,8 +40,7 @@ pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bos
 }
 
 fn parse_event(json: Value) -> Result<Event, Error> {
-    let event: Event = serde_json::from_value(json)
-        .map_err(|e| e.context(WatchAutoscalingError::FailedParseEvent))?;
+    let event: Event = serde_json::from_value(json).map_err(|e| e.context(WatchAutoscalingError::FailedParseEvent))?;
     debug!("Parsed event = {:?}.", event);
 
     Ok(event)
@@ -60,7 +59,7 @@ mod tests {
 
     use super::asg::AutoScalingEvent;
     use crate::asg_mapping::{Mapping, Mappings};
-    use crate::bosun::testing::{BosunMockClient, BosunCallStats};
+    use crate::bosun::testing::{BosunCallStats, BosunMockClient};
     use crate::testing::setup;
 
     use chrono::offset::Utc;
@@ -85,7 +84,10 @@ mod tests {
         assert_that!(&res).is_ok();
 
         let bosun_stats = bosun.to_stats();
-        asserting("bosun calls").that(&bosun_stats).named("actual calls").is_equal_to(&expected);
+        asserting("bosun calls")
+            .that(&bosun_stats)
+            .named("actual calls")
+            .is_equal_to(&expected);
     }
 
     #[test]
@@ -96,9 +98,11 @@ mod tests {
         let ctx = Context::default();
         let mut config = FunctionConfig::default();
         config.asg.mappings = Mappings {
-            items: vec![
-                Mapping { search: "my".to_string(), tag_name: "my".to_string(), host_prefix: "my-server-".to_string() },
-            ],
+            items: vec![Mapping {
+                search: "my".to_string(),
+                tag_name: "my".to_string(),
+                host_prefix: "my-server-".to_string(),
+            }],
         };
         let asg_event = asg_success_full_termination_event();
         let event = serde_json::to_value(asg_event).unwrap();
@@ -108,13 +112,22 @@ mod tests {
         assert_that!(&res).is_ok();
 
         let bosun_stats = bosun.to_stats();
-        asserting("bosun calls").that(&bosun_stats).named("actual calls").is_equal_to(&expected);
+        asserting("bosun calls")
+            .that(&bosun_stats)
+            .named("actual calls")
+            .is_equal_to(&expected);
     }
 
     fn asg_success_full_termination_event() -> AutoScalingEvent {
         let mut detail = HashMap::new();
-        detail.insert("EC2InstanceId".to_string(), Value::String("i-1234567890abcdef0".to_string()));
-        detail.insert("AutoScalingGroupName".to_string(), Value::String("my-auto-scaling-group".to_string()));
+        detail.insert(
+            "EC2InstanceId".to_string(),
+            Value::String("i-1234567890abcdef0".to_string()),
+        );
+        detail.insert(
+            "AutoScalingGroupName".to_string(),
+            Value::String("my-auto-scaling-group".to_string()),
+        );
         let asg = AutoScalingEvent {
             version: Some("0".to_string()),
             id: Some("12345678-1234-1234-1234-123456789012".to_string()),

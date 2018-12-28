@@ -1,7 +1,7 @@
+use crate::asg_mapping::Mapping;
 use crate::bosun::{self, Bosun, Datum, Silence, Tags};
 use crate::config::FunctionConfig;
 use crate::error::WatchAutoscalingError;
-use crate::asg_mapping::Mapping;
 use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
@@ -30,7 +30,9 @@ pub struct TerminationDetails<'a> {
 
 impl<'a> AsgLifeCycleEvent<'a> {
     pub fn try_from(asg: &'a AutoScalingEvent) -> Result<AsgLifeCycleEvent<'a>, Error> {
-        let detail_type = asg.detail_type.as_ref()
+        let detail_type = asg
+            .detail_type
+            .as_ref()
             .ok_or_else(|| Error::from(WatchAutoscalingError::NoDetailType))?;
 
         match detail_type.as_str() {
@@ -42,18 +44,18 @@ impl<'a> AsgLifeCycleEvent<'a> {
                 let details = AsgLifeCycleEvent::lifecycle_details_from(asg)?;
                 Ok(AsgLifeCycleEvent::UnsuccessfulLaunch(details))
             }
-            "EC2 Instance Terminate Successful" =>
-                AsgLifeCycleEvent::successful_termination_from(asg),
+            "EC2 Instance Terminate Successful" => AsgLifeCycleEvent::successful_termination_from(asg),
             "EC2 Instance Terminate Unsuccessful" => {
                 let details = AsgLifeCycleEvent::lifecycle_details_from(asg)?;
                 Ok(AsgLifeCycleEvent::UnsuccessfulTermination(details))
             }
-            _ => Err(Error::from(WatchAutoscalingError::FailedParseAsgEvent))
+            _ => Err(Error::from(WatchAutoscalingError::FailedParseAsgEvent)),
         }
     }
 
     fn lifecycle_details_from(asg: &'a AutoScalingEvent) -> Result<LifeCycleDetails<'a>, Error> {
-        let auto_scaling_group_name = asg.detail
+        let auto_scaling_group_name = asg
+            .detail
             .get("AutoScalingGroupName")
             .and_then(|x| x.as_str())
             .ok_or_else(|| Error::from(WatchAutoscalingError::NoAutoScalingGroupName))?;
@@ -65,11 +67,13 @@ impl<'a> AsgLifeCycleEvent<'a> {
     }
 
     fn successful_termination_from(asg: &'a AutoScalingEvent) -> Result<AsgLifeCycleEvent<'a>, Error> {
-        let instance_id = asg.detail
+        let instance_id = asg
+            .detail
             .get("EC2InstanceId")
             .and_then(|x| x.as_str())
             .ok_or_else(|| Error::from(WatchAutoscalingError::NoInstanceId))?;
-        let auto_scaling_group_name = asg.detail
+        let auto_scaling_group_name = asg
+            .detail
             .get("AutoScalingGroupName")
             .and_then(|x| x.as_str())
             .ok_or_else(|| Error::from(WatchAutoscalingError::NoAutoScalingGroupName))?;
@@ -98,9 +102,11 @@ pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionCon
     info!("Mapped ASG to '{:?}'.", mapping);
 
     let mut tags = Tags::new();
-    tags.insert("asg".to_string(), mapping
-        .map(|x| x.tag_name.to_string())
-        .unwrap_or_else(|| "unmapped".to_string())
+    tags.insert(
+        "asg".to_string(),
+        mapping
+            .map(|x| x.tag_name.to_string())
+            .unwrap_or_else(|| "unmapped".to_string()),
     );
     let value = value.to_string();
     let datum = Datum::now(bosun::METRIC_ASG_UP_DOWN, &value, &tags);
@@ -113,10 +119,17 @@ pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionCon
     Ok(())
 }
 
-fn set_bosun_silence(details: &TerminationDetails, duration: &str, mapping: Option<&Mapping>, bosun: &Bosun) -> Result<(), Error> {
-    let host_prefix = mapping
-        .map(|x| &x.host_prefix)
-        .ok_or_else(|| Error::from(WatchAutoscalingError::NoHostMappingFound(details.auto_scaling_group_name.to_string())))?;
+fn set_bosun_silence(
+    details: &TerminationDetails,
+    duration: &str,
+    mapping: Option<&Mapping>,
+    bosun: &Bosun,
+) -> Result<(), Error> {
+    let host_prefix = mapping.map(|x| &x.host_prefix).ok_or_else(|| {
+        Error::from(WatchAutoscalingError::NoHostMappingFound(
+            details.auto_scaling_group_name.to_string(),
+        ))
+    })?;
 
     let host = format!("{}{}*", &host_prefix, details.instance_id);
     info!("Setting silence of {} for host '{}'.", duration, host);
@@ -143,8 +156,14 @@ mod tests {
 
     fn asg_success_full_termination_event() -> AutoScalingEvent {
         let mut detail = HashMap::new();
-        detail.insert("EC2InstanceId".to_string(), Value::String("i-1234567890abcdef0".to_string()));
-        detail.insert("AutoScalingGroupName".to_string(), Value::String("my-auto-scaling-group".to_string()));
+        detail.insert(
+            "EC2InstanceId".to_string(),
+            Value::String("i-1234567890abcdef0".to_string()),
+        );
+        detail.insert(
+            "AutoScalingGroupName".to_string(),
+            Value::String("my-auto-scaling-group".to_string()),
+        );
         let asg = AutoScalingEvent {
             version: Some("0".to_string()),
             id: Some("12345678-1234-1234-1234-123456789012".to_string()),
@@ -175,10 +194,11 @@ mod tests {
 
         asserting("failed to parse asg event").that(&asg_event).is_ok();
         match asg_event.unwrap() {
-            AsgLifeCycleEvent::SuccessfulTermination(ref details) => assert_that(&details).named("termination details").is_equal_to(&expected_details),
+            AsgLifeCycleEvent::SuccessfulTermination(ref details) => assert_that(&details)
+                .named("termination details")
+                .is_equal_to(&expected_details),
             _ => panic!("wrong event"),
         };
     }
-
 
 }

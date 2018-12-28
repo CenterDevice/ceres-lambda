@@ -17,5 +17,5 @@ pub enum WatchAutoscalingError {
     #[fail(display = "failed to load config file because {}", _0)]
     FailedConfig(String),
     #[fail(display = "did not find mapping from asg name '{}' to host prefix", _0)]
-    NoHostMappingFound(String)
+    NoHostMappingFound(String),
 }

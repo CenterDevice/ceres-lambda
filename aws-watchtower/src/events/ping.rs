@@ -18,8 +18,8 @@ pub fn handle<T: Bosun>(ping: Ping, _: &Context, _: &FunctionConfig, _: &T) -> R
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::Event;
+    use super::*;
 
     use serde_json::json;
 
