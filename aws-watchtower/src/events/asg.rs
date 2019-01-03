@@ -1,10 +1,12 @@
 use crate::asg_mapping::Mapping;
 use crate::bosun::{self, Bosun, Datum, Silence, Tags};
 use crate::config::FunctionConfig;
+use crate::events::HandleResult;
 use crate::error::WatchAutoscalingError;
 use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
+use serde;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 
@@ -88,7 +90,7 @@ impl<'a> AsgLifeCycleEvent<'a> {
     }
 }
 
-pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionConfig, bosun: &T) -> Result<(), Error> {
+pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
     debug!("Received AutoScalingEvent {:?}.", asg);
     let event = AsgLifeCycleEvent::try_from(&asg)?;
     info!("Received AsgLifeCycleEvent {:?}.", event);
@@ -118,7 +120,7 @@ pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionCon
         set_bosun_silence(details, &config.asg.scaledown_silence_duration, mapping, bosun)?
     };
 
-    Ok(())
+    Ok(HandleResult::Empty)
 }
 
 fn set_bosun_silence(

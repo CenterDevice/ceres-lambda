@@ -1,10 +1,12 @@
 use crate::bosun::{self, Bosun, Datum, Tags};
+use crate::aws::ec2::ebs::VolumeInfo;
 use crate::config::FunctionConfig;
 use crate::error::WatchAutoscalingError;
 use failure::{Error, Fail};
 use lambda_runtime::Context;
 use log::debug;
-use serde_derive::Deserialize;
+use serde;
+use serde_derive::{Deserialize, Serialize};
 use serde_json::{self, Value};
 
 pub mod asg;
@@ -22,7 +24,15 @@ pub enum Event {
     Ping(ping::Ping),
 }
 
-pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<(), Error> {
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum HandleResult {
+    Empty,
+    Ping(String),
+    VolumeInfo(VolumeInfo),
+}
+
+pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
     let tags = Tags::new();
     let datum = Datum::now(bosun::METRIC_LAMBDA_INVOCATION_COUNT, "1", &tags);
     bosun.emit_datum(&datum)?;
@@ -51,11 +61,11 @@ fn parse_event(json: Value) -> Result<Event, Error> {
     Ok(event)
 }
 
-fn handle_event<T: Bosun>(event: Event, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<(), Error> {
+fn handle_event<T: Bosun>(event: Event, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
     match event {
-        Event::Asg(asg) => asg::handle(asg, &ctx, &config, bosun),
-        Event::Ebs(ebs) => ebs::handle(ebs, &ctx, &config, bosun),
-        Event::Ping(ping) => ping::handle(ping, &ctx, &config, bosun),
+        Event::Asg(asg) => asg::handle(asg, ctx, config, bosun),
+        Event::Ebs(ebs) => ebs::handle(ebs, ctx, config, bosun),
+        Event::Ping(ping) => ping::handle(ping, ctx, config, bosun),
     }
 }
 

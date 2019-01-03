@@ -5,6 +5,7 @@ use failure::Error;
 use lambda_runtime::{error::HandlerError, Context};
 use lazy_static;
 use log::info;
+use serde;
 use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
@@ -54,10 +55,10 @@ fn run(json: Value, ctx: &Context) -> Result<(), Error> {
 
     log_result(&res, ctx);
 
-    res
+    Ok(())
 }
 
-fn log_result(res: &Result<(), Error>, ctx: &Context) {
+fn log_result(res: &Result<impl serde::Serialize, Error>, ctx: &Context) {
     let lambda_result = match res {
         Ok(ref details) => LambdaResult::from_ctx(ctx, None, Some(details)),
         Err(ref e) => LambdaResult::from_ctx(ctx, Some(e.to_string()), None),

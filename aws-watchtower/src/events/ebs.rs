@@ -1,9 +1,11 @@
 use crate::aws::{self, AwsError};
 use crate::bosun::{self, Bosun, Datum, Tags};
 use crate::config::FunctionConfig;
+use crate::events::HandleResult;
 use failure::Error;
 use lambda_runtime::Context;
-use log::info;
+use log::{debug, info};
+use serde;
 use serde_derive::Deserialize;
 use serde_json;
 use std::fmt;
@@ -97,7 +99,7 @@ impl fmt::Display for VolumeResult {
     }
 }
 
-pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfig, bosun: &T) -> Result<(), Error> {
+pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
     info!("Received VolumeEvent {:?}.", event);
 
     let change_value = match &event.detail.event {
@@ -113,7 +115,7 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
     let datum = Datum::now(bosun::METRIC_EBS_VOLUME_EVENT, &value, &tags);
     bosun.emit_datum(&datum)?;
 
-    if event.detail.event == VolumeEventType::CreateVolume {
+    let res = if event.detail.event == VolumeEventType::CreateVolume {
         let value = if event.detail.result == VolumeResult::Available {
             0
         } else {
@@ -133,9 +135,14 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
         let value = value.to_string();
         let datum = Datum::now(bosun::METRIC_EBS_VOLUME_CREATION_RESULT, &value, &tags);
         bosun.emit_datum(&datum)?;
-    }
 
-    Ok(())
+        HandleResult::VolumeInfo(volume_info)
+    } else {
+        HandleResult::Empty
+    };
+    debug!("Handle result = {:?}", res);
+
+    Ok(res)
 }
 
 #[cfg(test)]
