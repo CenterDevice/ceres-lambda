@@ -43,3 +43,7 @@ clean-local:
 clean-cross:
 	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) cargo clean
 
+clean-cross-me:
+	docker run --rm -it -v "$$(pwd)":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE) cargo clean --package aws-watchtower
+	rm target/x86_64-unknown-linux-musl/release/bootstrap
+

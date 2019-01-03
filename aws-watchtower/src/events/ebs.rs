@@ -136,7 +136,7 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
         let datum = Datum::now(bosun::METRIC_EBS_VOLUME_CREATION_RESULT, &value, &tags);
         bosun.emit_datum(&datum)?;
 
-        HandleResult::VolumeInfo(volume_info)
+        HandleResult::VolumeInfo { volume_info }
     } else {
         HandleResult::Empty
     };
@@ -148,6 +148,8 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::aws::ec2::ebs::VolumeInfo;
+    use crate::testing;
 
     use spectral::prelude::*;
 
@@ -201,5 +203,25 @@ mod tests {
         let event: Result<VolumeEvent, _> = serde_json::from_str(json);
 
         assert_that(&event).is_ok();
+    }
+
+
+    #[test]
+    fn serialize_handle_result() {
+        testing::setup();
+
+        let volume_info = VolumeInfo {
+            volume_id: "012345678901".to_string(),
+            create_time: "yyyy-mm-ddThh:mm:ssZ".to_string(),
+            state: "in-use".to_string(),
+            kms_key_id: Some("arn:aws:kms:sa-east-1:0123456789ab:key/01234567-0123-0123-0123-0123456789ab".to_string()),
+            encrypted: true,
+        };
+        let result = HandleResult::VolumeInfo { volume_info };
+
+        let res = serde_json::to_string(&result);
+        println!("Serialized = {:?}", res);
+
+        assert_that!(&res).is_ok();
     }
 }

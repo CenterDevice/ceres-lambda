@@ -25,11 +25,14 @@ pub enum Event {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum HandleResult {
+    #[serde(rename = "empty")]
     Empty,
-    Ping(String),
-    VolumeInfo(VolumeInfo),
+    #[serde(rename = "ping")]
+    Ping { echo_reply: String },
+    #[serde(rename = "ec2.ebs.volume_info")]
+    VolumeInfo { volume_info: VolumeInfo },
 }
 
 pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {

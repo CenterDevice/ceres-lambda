@@ -15,7 +15,7 @@ pub struct Ping {
 pub fn handle<T: Bosun>(ping: Ping, _: &Context, _: &FunctionConfig, _: &T) -> Result<HandleResult, Error> {
     info!("Received {:?}.", ping);
 
-    Ok(HandleResult::Ping("Echo reply".to_string()))
+    Ok(HandleResult::Ping{ echo_reply: "Echo reply".to_string()})
 }
 
 #[cfg(test)]
@@ -23,6 +23,7 @@ mod tests {
     use super::super::Event;
     use super::*;
 
+    use spectral::prelude::*;
     use serde_json::json;
 
     fn setup() {
@@ -45,5 +46,17 @@ mod tests {
             Ok(Event::Ping(_)) => {}
             _ => assert!(false),
         }
+    }
+
+    #[test]
+    fn serialize_handle_result() {
+        setup();
+
+        let result = HandleResult::Ping{ echo_reply: "Echo reply".to_string()};
+
+        let res = serde_json::to_string(&result);
+        println!("Serialized = {:?}", res);
+
+        assert_that!(&res).is_ok();
     }
 }
