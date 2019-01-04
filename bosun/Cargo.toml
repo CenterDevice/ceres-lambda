@@ -10,7 +10,7 @@ name = "bosun"
 path = "src/lib.rs"
 
 [dependencies]
-chrono = "0.4.6"
+chrono = "0.4"
 failure = "0.1"
 failure_derive = "0.1"
 log = "0.4"

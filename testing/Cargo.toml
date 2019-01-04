@@ -10,5 +10,5 @@ name = "testing"
 path = "src/lib.rs"
 
 [dependencies]
-env_logger = "0.6.0"
+env_logger = "0.6"
 
