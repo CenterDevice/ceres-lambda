@@ -1,7 +1,7 @@
 use crate::asg_mapping::Mappings;
-use crate::aws::kms;
 use crate::WatchAutoscalingError;
 
+use aws::kms;
 use clams::config::*;
 use clams_derive::Config;
 use failure::{Error, Fail};

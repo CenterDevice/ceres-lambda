@@ -1,0 +1,26 @@
+[package]
+name = "aws"
+version = "0.0.1"
+authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
+
+edition = "2018"
+
+[lib]
+name = "aws"
+path = "src/lib.rs"
+
+[dependencies]
+base64 = "0.10"
+failure = "0.1"
+failure_derive = "0.1"
+log = "0.4"
+rusoto_core = "0.35"
+rusoto_kms = "0.35"
+rusoto_ec2 = "0.35"
+serde = "1"
+serde_derive = "1"
+
+[dev-dependencies]
+spectral = "^0.6"
+testing = { version = "0.0.1", path = "../testing" }
+

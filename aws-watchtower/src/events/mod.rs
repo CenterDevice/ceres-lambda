@@ -1,7 +1,8 @@
-use crate::bosun::{self, Bosun, Datum, Tags};
-use crate::aws::ec2::ebs::VolumeInfo;
 use crate::config::FunctionConfig;
 use crate::error::WatchAutoscalingError;
+use crate::metrics;
+use aws::ec2::ebs::VolumeInfo;
+use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
 use lambda_runtime::Context;
 use log::debug;
@@ -37,7 +38,7 @@ pub enum HandleResult {
 
 pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
     let tags = Tags::new();
-    let datum = Datum::now(bosun::METRIC_LAMBDA_INVOCATION_COUNT, "1", &tags);
+    let datum = Datum::now(metrics::LAMBDA_INVOCATION_COUNT, "1", &tags);
     bosun.emit_datum(&datum)?;
 
     let event = parse_event(json)?;
@@ -45,11 +46,11 @@ pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bos
 
     match res {
         Ok(_) => {
-            let datum = Datum::now(bosun::METRIC_LAMBDA_INVOCATION_RESULT, "0", &tags);
+            let datum = Datum::now(metrics::LAMBDA_INVOCATION_RESULT, "0", &tags);
             bosun.emit_datum(&datum)?
         }
         Err(_) => {
-            let datum = Datum::now(bosun::METRIC_LAMBDA_INVOCATION_RESULT, "1", &tags);
+            let datum = Datum::now(metrics::LAMBDA_INVOCATION_RESULT, "1", &tags);
             bosun.emit_datum(&datum)?
         }
     }
@@ -77,12 +78,12 @@ mod tests {
     use super::*;
 
     use crate::asg_mapping::{Mapping, Mappings};
-    use crate::bosun::testing::{BosunCallStats, BosunMockClient};
-    use crate::testing::setup;
+    use bosun::testing::{BosunCallStats, BosunMockClient};
 
     use env_logger;
     use serde_json::json;
     use spectral::prelude::*;
+    use testing::setup;
 
     #[test]
     fn test_handle_ping() {

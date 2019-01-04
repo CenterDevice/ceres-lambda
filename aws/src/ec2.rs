@@ -1,5 +1,5 @@
 pub mod ebs {
-    use crate::aws::{auth, AwsError};
+    use crate::{auth, AwsError};
     use failure::Error;
     use log::debug;
     use rusoto_core::{HttpClient, Region};
@@ -78,8 +78,8 @@ pub mod ebs {
     mod tests {
         use super::*;
 
-        use crate::testing;
         use spectral::prelude::*;
+        use testing;
 
         #[test]
         fn test_id_from_arn() {

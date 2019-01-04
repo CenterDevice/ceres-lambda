@@ -1,4 +1,4 @@
-use crate::aws::auth;
+use crate::auth;
 use failure::{Error, Fail};
 use log::{debug, warn};
 use rusoto_core::{HttpClient, Region};

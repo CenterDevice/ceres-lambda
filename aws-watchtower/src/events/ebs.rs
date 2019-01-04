@@ -1,7 +1,9 @@
-use crate::aws::{self, AwsError};
-use crate::bosun::{self, Bosun, Datum, Tags};
 use crate::config::FunctionConfig;
 use crate::events::HandleResult;
+use crate::metrics;
+
+use aws::{self, AwsError};
+use bosun::{ Bosun, Datum, Tags};
 use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
@@ -112,7 +114,7 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
     tags.insert("event".to_string(), event.detail.event.to_string());
     tags.insert("result".to_string(), event.detail.result.to_string());
     let value = change_value.to_string();
-    let datum = Datum::now(bosun::METRIC_EBS_VOLUME_EVENT, &value, &tags);
+    let datum = Datum::now(metrics::EBS_VOLUME_EVENT, &value, &tags);
     bosun.emit_datum(&datum)?;
 
     let res = if event.detail.event == VolumeEventType::CreateVolume {
@@ -133,7 +135,7 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
         let mut tags = Tags::new();
         tags.insert("encrypted".to_string(), volume_info.encrypted.to_string());
         let value = value.to_string();
-        let datum = Datum::now(bosun::METRIC_EBS_VOLUME_CREATION_RESULT, &value, &tags);
+        let datum = Datum::now(metrics::EBS_VOLUME_CREATION_RESULT, &value, &tags);
         bosun.emit_datum(&datum)?;
 
         HandleResult::VolumeInfo { volume_info }
@@ -148,10 +150,10 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aws::ec2::ebs::VolumeInfo;
-    use crate::testing;
+    use aws::ec2::ebs::VolumeInfo;
 
     use spectral::prelude::*;
+    use testing;
 
     #[test]
     fn test_deserialize_create_volume_event_result_is_available() {

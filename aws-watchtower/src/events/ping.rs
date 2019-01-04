@@ -1,6 +1,6 @@
-use crate::bosun::Bosun;
 use crate::config::FunctionConfig;
 use crate::events::HandleResult;
+use bosun::Bosun;
 use failure::Error;
 use lambda_runtime::Context;
 use log::info;
@@ -25,9 +25,10 @@ mod tests {
 
     use spectral::prelude::*;
     use serde_json::json;
+    use testing;
 
     fn setup() {
-        crate::testing::setup();
+        testing::setup();
     }
 
     #[test]

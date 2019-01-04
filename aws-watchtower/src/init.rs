@@ -1,6 +1,7 @@
-use crate::bosun::{self, Bosun, BosunClient, Metadata};
 use crate::config::{EncryptedFunctionConfig, EnvConfig, FunctionConfig};
 use crate::error::WatchAutoscalingError;
+use crate::metrics;
+use bosun::{Bosun, BosunClient, Metadata};
 use clams::config::Config;
 use failure::Error;
 use lambda_runtime::Context;
@@ -43,7 +44,7 @@ pub fn bosun(config: &FunctionConfig, ctx: &Context) -> Result<impl Bosun, Error
 
 pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     let metadata = Metadata::new(
-        bosun::METRIC_ASG_UP_DOWN,
+        metrics::ASG_UP_DOWN,
         "rate",
         "Scaling",
         "ASG up and down scaling event [-1 = down scaling, +1 = up scaling]",
@@ -51,7 +52,7 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     bosun.emit_metadata(&metadata)?;
 
     let metadata = Metadata::new(
-        bosun::METRIC_EBS_VOLUME_EVENT,
+        metrics::EBS_VOLUME_EVENT,
         "rate",
         "Change",
         "Creation or deletion of EBS volumes [-1 = deletion, +1 = creation]",
@@ -59,7 +60,7 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     bosun.emit_metadata(&metadata)?;
 
     let metadata = Metadata::new(
-        bosun::METRIC_EBS_VOLUME_CREATION_RESULT,
+        metrics::EBS_VOLUME_CREATION_RESULT,
         "gauge",
         "Result",
         "Creation result of EBS volumes [0 = success, 1 = failure]",
@@ -67,7 +68,7 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     bosun.emit_metadata(&metadata)?;
 
     let metadata = Metadata::new(
-        bosun::METRIC_LAMBDA_INVOCATION_COUNT,
+        metrics::LAMBDA_INVOCATION_COUNT,
         "rate",
         "Invocations",
         "AWS Lambda function invocation counter",
@@ -75,7 +76,7 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     bosun.emit_metadata(&metadata)?;
 
     let metadata = Metadata::new(
-        bosun::METRIC_LAMBDA_INVOCATION_RESULT,
+        metrics::LAMBDA_INVOCATION_RESULT,
         "gauge",
         "Result",
         "AWS Lambda function invocation result code [0 = success, >0 = failure]",

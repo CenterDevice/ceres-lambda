@@ -1,8 +1,9 @@
 use crate::asg_mapping::Mapping;
-use crate::bosun::{self, Bosun, Datum, Silence, Tags};
 use crate::config::FunctionConfig;
 use crate::events::HandleResult;
 use crate::error::WatchAutoscalingError;
+use crate::metrics;
+use bosun::{Bosun, Datum, Silence, Tags};
 use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
@@ -113,7 +114,7 @@ pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionCon
             .unwrap_or_else(|| "unmapped".to_string()),
     );
     let value = value.to_string();
-    let datum = Datum::now(bosun::METRIC_ASG_UP_DOWN, &value, &tags);
+    let datum = Datum::now(metrics::ASG_UP_DOWN, &value, &tags);
     bosun.emit_datum(&datum)?;
 
     if let AsgLifeCycleEvent::SuccessfulTermination(ref details) = event {
@@ -151,9 +152,10 @@ mod tests {
     use chrono::offset::Utc;
     use env_logger;
     use spectral::prelude::*;
+    use testing;
 
     fn setup() {
-        crate::testing::setup();
+        testing::setup();
     }
 
     fn asg_success_full_termination_event() -> AutoScalingEvent {

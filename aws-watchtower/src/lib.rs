@@ -10,12 +10,11 @@ use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
 mod asg_mapping;
-mod bosun;
+mod metrics;
 pub mod config;
 pub mod error;
 mod events;
 mod init;
-mod aws;
 mod lambda;
 
 // Use a counter, in case we want to track how often the function gets called before getting cold
@@ -65,18 +64,4 @@ fn log_result(res: &Result<impl serde::Serialize, Error>, ctx: &Context) {
     };
     lambda_result.log_human();
     lambda_result.log_json();
-}
-
-#[cfg(test)]
-mod testing {
-    use std::sync::{Once, ONCE_INIT};
-
-    pub static INIT: Once = ONCE_INIT;
-
-    /// Setup function that is only run once, even if called multiple times.
-    pub fn setup() {
-        INIT.call_once(|| {
-            env_logger::init();
-        });
-    }
 }
