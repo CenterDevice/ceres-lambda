@@ -1,0 +1,47 @@
+DOCKER_BUILD_IMAGE = ekidd/rust-musl-builder:stable
+
+all: local
+
+local:
+	cargo check
+	cargo build
+	cargo test
+
+todos:
+	rg --vimgrep -g '!Makefile' -i todo 
+
+RUN_DOCKER = docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE)
+
+.cargo.cache/git:
+	mkdir -p $@
+	#docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/git
+	$(RUN_DOCKER) sudo chown -R rust:rust /home/rust/.cargo/git
+
+.cargo.cache/registry:
+	mkdir -p $@
+	$(RUN_DOCKER) sudo chown -R rust:rust /home/rust/.cargo/registry
+
+cross_compile: ../target/x86_64-unknown-linux-musl/release/$(FUNC_NAME_BIN)
+../target/x86_64-unknown-linux-musl/release/$(FUNC_NAME_BIN): .cargo.cache/git .cargo.cache/registry
+	$(RUN_DOCKER) cargo test --package $(FUNC_NAME) --release
+	$(RUN_DOCKER) cargo build --package $(FUNC_NAME) --release
+
+
+upgrade: upgrade-docker-images
+
+upgrade-docker-images:
+	docker pull $(DOCKER_BUILD_IMAGE)
+
+
+clean: clean-local clean-cross
+clean-local:
+	cargo clean
+
+clean-cross:
+	$(RUN_DOCKER) cargo clean
+
+clean-cross-me:
+	$(RUN_DOCKER) cargo clean --package $(FUNC_NAME)
+	rm target/x86_64-unknown-linux-musl/release/$(FUNC_NAME_BIN)
+
+

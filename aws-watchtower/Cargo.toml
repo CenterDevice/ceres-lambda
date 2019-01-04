@@ -7,8 +7,8 @@ build = "build.rs"
 edition = "2018"
 
 [[bin]]
-name = "bootstrap"
-path = "src/bin/bootstrap.rs"
+name = "aws-watchtower"
+path = "src/bin/aws-watchtower.rs"
 
 [[bin]]
 name = "validate-config"

@@ -52,41 +52,33 @@ before_install: |
     echo "+++ Preparing Docker: done."
   fi
 script: |
-  BASE_DIR=$(pwd)
-  for function in $FUNCTIONS; do
-    cd $BASE_DIR/$function
-    echo "+++ Building with $TRAVIS_RUST_VERSION"
-    cargo test --verbose --all
-    echo "+++ Building with $TRAVIS_RUST_VERSION: done."
-    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      echo "+++ Building static musl version with $TRAVIS_RUST_VERSION" &&
-      docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/src/target &&
-      docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
-      echo "+++ Building static musl version with $TRAVIS_RUST_VERSION: done."
-    fi
-  done
-  cd $BASE_DIR
+  echo "+++ Building with $TRAVIS_RUST_VERSION"
+  cargo test --verbose --all
+  echo "+++ Building with $TRAVIS_RUST_VERSION: done."
+  if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+    echo "+++ Building static musl versions with $TRAVIS_RUST_VERSION" &&
+    docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION sudo chown -R rust:rust /home/rust/src/target &&
+    docker run --rm -it -v "$(pwd)":/home/rust/src -v "$BASE_DIR/.cargo.cache/git":/home/rust/.cargo/git -v "$BASE_DIR/.cargo.cache/registry":/home/rust/.cargo/registry ekidd/rust-musl-builder:$TRAVIS_RUST_VERSION cargo test --verbose --all &&
+    echo "+++ Building static musl version with $TRAVIS_RUST_VERSION: done."
+  fi
 after_success: |
-  BASE_DIR=$(pwd)
-  for function in $FUNCTIONS; do
-    cd $BASE_DIR/$function
-    if [[ "$TRAVIS_OS_NAME" == "linux" && "$CODECOV" ]]; then
-      echo "+++ Checking code coverage" &&
-      wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-      tar xzf master.tar.gz &&
-      cd kcov-master &&
-      mkdir build &&
-      cd build &&
-      cmake .. &&
-      make &&
-      make install DESTDIR=../../kcov-build &&
-      cd ../.. &&
-      rm -rf kcov-master &&
-      for file in target/debug/$(echo ${function} | sed '-' '_')-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
-      bash <(curl -s https://codecov.io/bash) &&
-      echo "Uploaded code coverage." &&
-      echo "+++ Checking code coverage: done."
-    fi
-  done
-  cd $BASE_DIR
+  if [[ "$TRAVIS_OS_NAME" == "linux" && "$CODECOV" ]]; then
+    echo "+++ Checking code coverage" &&
+    wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+    tar xzf master.tar.gz &&
+    cd kcov-master &&
+    mkdir build &&
+    cd build &&
+    cmake .. &&
+    make &&
+    make install DESTDIR=../../kcov-build &&
+    cd ../.. &&
+    rm -rf kcov-master &&
+    for function in $FUNCTIONS; do
+      for file in target/debug/$(echo ${function} | sed '-' '_')-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done
+    done &&
+    bash <(curl -s https://codecov.io/bash) &&
+    echo "Uploaded code coverage." &&
+    echo "+++ Checking code coverage: done."
+  fi
 
