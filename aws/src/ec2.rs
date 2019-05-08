@@ -1,3 +1,14 @@
+pub mod asg {
+    use serde_derive::Serialize;
+
+    #[derive(Debug, Serialize)]
+    pub struct AsgScalingInfo {
+        pub ec2_instance_id: String,
+        pub auto_scaling_group_name: String,
+        pub auto_scaling_event: String,
+    }
+}
+
 pub mod ebs {
     use crate::{auth, AwsError};
     use failure::Error;

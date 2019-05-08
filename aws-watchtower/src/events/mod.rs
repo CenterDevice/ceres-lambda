@@ -1,7 +1,7 @@
 use crate::config::FunctionConfig;
 use crate::error::WatchAutoscalingError;
 use crate::metrics;
-use aws::ec2::ebs::VolumeInfo;
+use aws::ec2::{asg::AsgScalingInfo, ebs::VolumeInfo};
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
 use lambda_runtime::Context;
@@ -32,6 +32,8 @@ pub enum HandleResult {
     Empty,
     #[serde(rename = "ping")]
     Ping { echo_reply: String },
+    #[serde(rename = "ec2.asg.auto_scaling_info")]
+    AsgScalingInfo { auto_scaling_info: AsgScalingInfo },
     #[serde(rename = "ec2.ebs.volume_info")]
     VolumeInfo { volume_info: VolumeInfo },
 }

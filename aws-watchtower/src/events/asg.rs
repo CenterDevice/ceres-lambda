@@ -10,6 +10,7 @@ use log::{debug, info};
 use serde;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
+use aws::ec2::asg::AsgScalingInfo;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AutoScalingEvent {
@@ -121,7 +122,13 @@ pub fn handle<T: Bosun>(asg: AutoScalingEvent, _: &Context, config: &FunctionCon
         set_bosun_silence(details, &config.asg.scaledown_silence_duration, mapping, bosun)?
     };
 
-    Ok(HandleResult::Empty)
+    let auto_scaling_info = AsgScalingInfo {
+        ec2_instance_id: asg.detail.ec2_instance_id,
+        auto_scaling_group_name: asg.detail.auto_scaling_group_name,
+        auto_scaling_event: asg.detail_type,
+    };
+
+    Ok(HandleResult::AsgScalingInfo{ auto_scaling_info })
 }
 
 fn set_bosun_silence(
