@@ -1,3 +1,5 @@
 **/.cargo.cache/
 **/target/
+**/.idea/
+**/*.iml
 
