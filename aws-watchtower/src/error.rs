@@ -1,7 +1,7 @@
 use failure::Fail;
 
 #[derive(Debug, Fail)]
-pub enum WatchAutoscalingError {
+pub enum AwsWatchtowerError {
     #[fail(display = "failed to read environment variable '{}'", _0)]
     FailedEnvVar(&'static str),
     #[fail(display = "autoScalingEvent for Successful Termination did not contain EC2InstanceId")]

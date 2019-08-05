@@ -1,5 +1,5 @@
 use crate::config::{EncryptedFunctionConfig, EnvConfig, FunctionConfig};
-use crate::error::WatchAutoscalingError;
+use crate::error::AwsWatchtowerError;
 use crate::metrics;
 use bosun::{Bosun, BosunClient, Metadata};
 use clams::config::Config;
@@ -20,7 +20,7 @@ pub fn config() -> Result<FunctionConfig, Error> {
 
     let encrypted_config = EncryptedFunctionConfig::from_file(&env_config.config_file)
         // This map_err seems necessary since error_chain::Error is not Send + 'static
-        .map_err(|e| WatchAutoscalingError::FailedConfig(e.to_string()))?;
+        .map_err(|e| AwsWatchtowerError::FailedConfig(e.to_string()))?;
     debug!(
         "Loaded encrypted configuration from file {:?}.",
         &env_config.config_file

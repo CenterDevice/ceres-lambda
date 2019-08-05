@@ -1,7 +1,7 @@
 use crate::asg_mapping::Mapping;
 use crate::config::FunctionConfig;
 use crate::events::HandleResult;
-use crate::error::WatchAutoscalingError;
+use crate::error::AwsWatchtowerError;
 use crate::metrics;
 use bosun::{Bosun, Datum, Silence, Tags};
 use failure::Error;
@@ -70,7 +70,7 @@ impl<'a> AsgLifeCycleEvent<'a> {
                 let details = AsgLifeCycleEvent::lifecycle_details_from(asg)?;
                 Ok(AsgLifeCycleEvent::UnsuccessfulTermination(details))
             }
-            _ => Err(Error::from(WatchAutoscalingError::FailedParseAsgEvent)),
+            _ => Err(Error::from(AwsWatchtowerError::FailedParseAsgEvent)),
         }
     }
 
@@ -138,7 +138,7 @@ fn set_bosun_silence(
     bosun: &Bosun,
 ) -> Result<(), Error> {
     let host_prefix = mapping.map(|x| &x.host_prefix).ok_or_else(|| {
-        Error::from(WatchAutoscalingError::NoHostMappingFound(
+        Error::from(AwsWatchtowerError::NoHostMappingFound(
             details.auto_scaling_group_name.to_string(),
         ))
     })?;

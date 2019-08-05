@@ -1,5 +1,5 @@
 use crate::asg_mapping::Mappings;
-use crate::WatchAutoscalingError;
+use crate::AwsWatchtowerError;
 
 use aws::kms;
 use clams::config::*;
@@ -83,7 +83,7 @@ pub struct EnvConfig {
 impl EnvConfig {
     pub fn from_env() -> Result<Self, Error> {
         let config_file = std::env::var("CD_CONFIG_FILE")
-            .map_err(|e| e.context(WatchAutoscalingError::FailedEnvVar("CD_CONFIG_FILE")))?;
+            .map_err(|e| e.context(AwsWatchtowerError::FailedEnvVar("CD_CONFIG_FILE")))?;
 
         let env_config = EnvConfig { config_file };
 

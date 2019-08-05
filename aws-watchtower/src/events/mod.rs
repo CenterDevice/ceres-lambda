@@ -1,5 +1,5 @@
 use crate::config::FunctionConfig;
-use crate::error::WatchAutoscalingError;
+use crate::error::AwsWatchtowerError;
 use crate::metrics;
 use aws::ec2::{asg::AsgScalingInfo, ebs::VolumeInfo};
 use bosun::{Bosun, Datum, Tags};
@@ -61,7 +61,7 @@ pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bos
 }
 
 fn parse_event(json: Value) -> Result<Event, Error> {
-    let event: Event = serde_json::from_value(json).map_err(|e| e.context(WatchAutoscalingError::FailedParseEvent))?;
+    let event: Event = serde_json::from_value(json).map_err(|e| e.context(AwsWatchtowerError::FailedParseEvent))?;
     debug!("Parsed event = {:?}.", event);
 
     Ok(event)

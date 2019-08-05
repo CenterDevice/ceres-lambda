@@ -1,5 +1,5 @@
 use crate::config::FunctionConfig;
-use crate::error::WatchAutoscalingError;
+use crate::error::AwsWatchtowerError;
 use crate::lambda::LambdaResult;
 use failure::Error;
 use lambda_runtime::{error::HandlerError, Context};
