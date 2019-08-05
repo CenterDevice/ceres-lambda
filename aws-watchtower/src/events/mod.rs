@@ -61,7 +61,7 @@ pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bos
 }
 
 fn parse_event(json: Value) -> Result<Event, Error> {
-    let event: Event = serde_json::from_value(json).map_err(|e| e.context(AwsWatchtowerError::FailedParseEvent))?;
+    let event = serde_json::from_value(json.clone()).map_err(|e| e.context(AwsWatchtowerError::FailedParseEvent(json.to_string())))?;
     debug!("Parsed event = {:?}.", event);
 
     Ok(event)
@@ -86,6 +86,20 @@ mod tests {
     use serde_json::json;
     use spectral::prelude::*;
     use testing::setup;
+
+    #[test]
+    fn test_parsing_error() {
+        setup();
+
+        let event = json!(
+            { "this": "object", "does": "not parse" }
+        );
+        let res = parse_event(event);
+
+        asserting("Parsing failed").that(&res).is_err();
+        let err = res.unwrap_err().to_string();
+        asserting("Error contains original event").that(&err).contains("object");
+    }
 
     #[test]
     fn test_handle_ping() {

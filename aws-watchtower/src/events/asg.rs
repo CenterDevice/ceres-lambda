@@ -12,6 +12,7 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use aws::ec2::asg::AsgScalingInfo;
 
+// cf. https://docs.aws.amazon.com/autoscaling/ec2/userguide/cloud-watch-events.html
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AutoScalingEvent {
     pub version: String,

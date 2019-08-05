@@ -12,8 +12,8 @@ pub enum AwsWatchtowerError {
     NoDetailType,
     #[fail(display = "failed to parse AutoScalingEvent event")]
     FailedParseAsgEvent,
-    #[fail(display = "failed to parse event")]
-    FailedParseEvent,
+    #[fail(display = "failed to parse event '{}'", _0)]
+    FailedParseEvent(String),
     #[fail(display = "failed to load config file because {}", _0)]
     FailedConfig(String),
     #[fail(display = "did not find mapping from asg name '{}' to host prefix", _0)]
