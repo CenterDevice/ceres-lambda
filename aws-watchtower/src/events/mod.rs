@@ -43,8 +43,8 @@ pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bos
     let datum = Datum::now(metrics::LAMBDA_INVOCATION_COUNT, "1", &tags);
     bosun.emit_datum(&datum)?;
 
-    let event = parse_event(json)?;
-    let res = handle_event(event, ctx, &config, bosun);
+    let res = parse_event(json)
+      .and_then(|event| handle_event(event, ctx, &config, bosun));
 
     match res {
         Ok(_) => {
