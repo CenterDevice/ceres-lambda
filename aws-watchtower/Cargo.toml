@@ -1,6 +1,6 @@
 [package]
 name = "aws-watchtower"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
 build = "build.rs"
 
