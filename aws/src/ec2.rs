@@ -3,9 +3,9 @@ pub mod asg {
 
     #[derive(Debug, Serialize)]
     pub struct AsgScalingInfo {
-        pub ec2_instance_id: String,
+        pub ec2_instance_id:         String,
         pub auto_scaling_group_name: String,
-        pub auto_scaling_event: String,
+        pub auto_scaling_event:      String,
     }
 }
 
@@ -19,11 +19,11 @@ pub mod ebs {
 
     #[derive(Debug, Serialize)]
     pub struct VolumeInfo {
-        pub volume_id: String,
+        pub volume_id:   String,
         pub create_time: String,
-        pub state: String,
-        pub kms_key_id: Option<String>,
-        pub encrypted: bool,
+        pub state:       String,
+        pub kms_key_id:  Option<String>,
+        pub encrypted:   bool,
     }
 
     pub fn get_volume_info(volume_id: String) -> Result<VolumeInfo, Error> {
@@ -43,9 +43,11 @@ pub mod ebs {
 
         let response = ec2.describe_volumes(request).sync()?;
         debug!("Volume information request result: '{:?}'", response);
-        let first_vol = response.volumes
+        let first_vol = response
+            .volumes
             .ok_or_else(|| Error::from(AwsError::GeneralError("no volume information foundresult")))?
-            .into_iter().next()
+            .into_iter()
+            .next()
             .ok_or_else(|| Error::from(AwsError::GeneralError("volume information is empty")))?;
         debug!("Successfully retrieved volume information.");
 
@@ -57,15 +59,20 @@ pub mod ebs {
                 kms_key_id,
                 encrypted: Some(encrypted),
                 ..
-            } => Ok(
-                VolumeInfo {
+            } => {
+                Ok(VolumeInfo {
                     volume_id,
                     create_time,
                     state,
                     kms_key_id,
                     encrypted,
-                }),
-            _ => Err(Error::from(AwsError::GeneralError("volume information result is incomplete"))),
+                })
+            }
+            _ => {
+                Err(Error::from(AwsError::GeneralError(
+                    "volume information result is incomplete",
+                )))
+            }
         };
         debug!("Parsed volume information: '{:?}'", volume_info);
 
@@ -79,8 +86,10 @@ pub mod ebs {
 
     fn id_from_arn(arn: &str) -> Result<&str, Error> {
         debug!("Getting id from arn '{}'", arn);
-        let slash = arn.rfind('/').ok_or_else(|| Error::from(AwsError::GeneralError("Could not parse arn for id")))?;
-        let (_, id) = arn.split_at(slash+1); // Safe, because slash has been found.
+        let slash = arn
+            .rfind('/')
+            .ok_or_else(|| Error::from(AwsError::GeneralError("Could not parse arn for id")))?;
+        let (_, id) = arn.split_at(slash + 1); // Safe, because slash has been found.
 
         Ok(id)
     }

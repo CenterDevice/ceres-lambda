@@ -3,17 +3,17 @@ use serde_derive::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct LambdaResult<'a, T> {
-    function_name: &'a str,
+    function_name:    &'a str,
     function_version: &'a str,
-    aws_request_id: &'a str,
-    exit_code: usize,
-    error_msg: Option<String>,
-    details: Option<&'a T>,
-    git_commit_sha: &'a str,
-    git_commit_date: &'a str,
-    git_version: &'a str,
-    cargo_version: &'a str,
-    build_timestamp: &'a str,
+    aws_request_id:   &'a str,
+    exit_code:        usize,
+    error_msg:        Option<String>,
+    details:          Option<&'a T>,
+    git_commit_sha:   &'a str,
+    git_commit_date:  &'a str,
+    git_version:      &'a str,
+    cargo_version:    &'a str,
+    build_timestamp:  &'a str,
 }
 
 impl<'a, T> LambdaResult<'a, T>
@@ -54,9 +54,17 @@ where
 
 pub fn log_invocation(invocation_counter: usize, ctx: &Context) {
     eprintln!(
-        "I've been invoked ({}); function={}, lambda version={}, request_id={}, git commit sha={}, git commit date={}, git version={}, cargo version={}, build timestamp={}.",
-        invocation_counter, ctx.function_name, ctx.function_version, ctx.aws_request_id, env!("VERGEN_SHA_SHORT"), env!("VERGEN_COMMIT_DATE"), env!("VERGEN_SEMVER_LIGHTWEIGHT"), env!("CARGO_PKG_VERSION"),
- env!("VERGEN_BUILD_TIMESTAMP")
+        "I've been invoked ({}); function={}, lambda version={}, request_id={}, git commit sha={}, git commit \
+         date={}, git version={}, cargo version={}, build timestamp={}.",
+        invocation_counter,
+        ctx.function_name,
+        ctx.function_version,
+        ctx.aws_request_id,
+        env!("VERGEN_SHA_SHORT"),
+        env!("VERGEN_COMMIT_DATE"),
+        env!("VERGEN_SEMVER_LIGHTWEIGHT"),
+        env!("CARGO_PKG_VERSION"),
+        env!("VERGEN_BUILD_TIMESTAMP")
     );
 }
 

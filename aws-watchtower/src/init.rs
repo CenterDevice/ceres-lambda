@@ -1,13 +1,13 @@
-use crate::config::{EncryptedFunctionConfig, EnvConfig, FunctionConfig};
-use crate::error::AwsWatchtowerError;
-use crate::metrics;
+use crate::{
+    config::{EncryptedFunctionConfig, EnvConfig, FunctionConfig},
+    error::AwsWatchtowerError,
+    metrics,
+};
 use bosun::{Bosun, BosunClient, Metadata};
 use clams::config::Config;
 use failure::Error;
 use lambda_runtime::Context;
-use lazy_static;
 use log::debug;
-use serde_json;
 
 pub fn log() {
     env_logger::init();

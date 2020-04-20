@@ -20,15 +20,13 @@ impl Mappings {
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct Mapping {
-    pub search: String,
-    pub tag_name: String,
+    pub search:      String,
+    pub tag_name:    String,
     pub host_prefix: String,
 }
 
 impl Mapping {
-    pub fn matches(&self, text: &str) -> bool {
-        text.find(&self.search).is_some()
-    }
+    pub fn matches(&self, text: &str) -> bool { text.find(&self.search).is_some() }
 }
 
 #[cfg(test)]
@@ -52,13 +50,13 @@ host_prefix = "import-"
 "#;
         let items = vec![
             Mapping {
-                search: "webserver".to_string(),
-                tag_name: "webserver".to_string(),
+                search:      "webserver".to_string(),
+                tag_name:    "webserver".to_string(),
                 host_prefix: "webserver-".to_string(),
             },
             Mapping {
-                search: "import".to_string(),
-                tag_name: "import".to_string(),
+                search:      "import".to_string(),
+                tag_name:    "import".to_string(),
                 host_prefix: "import-".to_string(),
             },
         ];
@@ -77,8 +75,8 @@ host_prefix = "import-"
         let text = "project-staging-asg-webserver-20181205092547277600000001";
 
         let m = Mapping {
-            search: "webserver".to_string(),
-            tag_name: "webserver".to_string(),
+            search:      "webserver".to_string(),
+            tag_name:    "webserver".to_string(),
             host_prefix: "webserver-".to_string(),
         };
         let res = m.matches(text);
@@ -91,8 +89,8 @@ host_prefix = "import-"
         let text = "project-staging-asg-import_server-b40-20181125202055415500000001";
 
         let m = Mapping {
-            search: "webserver".to_string(),
-            tag_name: "webserver".to_string(),
+            search:      "webserver".to_string(),
+            tag_name:    "webserver".to_string(),
             host_prefix: "webserver-".to_string(),
         };
         let res = m.matches(text);
@@ -104,20 +102,20 @@ host_prefix = "import-"
     fn map() {
         let items = vec![
             Mapping {
-                search: "webserver".to_string(),
-                tag_name: "webserver".to_string(),
+                search:      "webserver".to_string(),
+                tag_name:    "webserver".to_string(),
                 host_prefix: "webserver-".to_string(),
             },
             Mapping {
-                search: "import".to_string(),
-                tag_name: "import".to_string(),
+                search:      "import".to_string(),
+                tag_name:    "import".to_string(),
                 host_prefix: "import-".to_string(),
             },
         ];
         let mappings = Mappings { items };
         let expected = Mapping {
-            search: "webserver".to_string(),
-            tag_name: "webserver".to_string(),
+            search:      "webserver".to_string(),
+            tag_name:    "webserver".to_string(),
             host_prefix: "webserver-".to_string(),
         };
 

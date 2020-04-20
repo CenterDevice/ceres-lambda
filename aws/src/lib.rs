@@ -9,4 +9,3 @@ pub enum AwsError {
     #[fail(display = "failed because {}", _0)]
     GeneralError(&'static str),
 }
-

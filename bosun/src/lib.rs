@@ -4,8 +4,7 @@ use log::{debug, info};
 use reqwest::{StatusCode, Url};
 use serde_derive::Serialize;
 use serde_json;
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 /// Result of an attempt to send meta data or a metric datum
 pub type BosunResult = Result<(), BosunError>;
@@ -31,9 +30,9 @@ pub type Tags = HashMap<String, String>;
 #[derive(Debug)]
 pub struct BosunClient {
     /// `<HOSTNAME|IP ADDR>:<PORT>`
-    pub host: String,
+    pub host:         String,
     /// Timeout for http request connection
-    pub timeout: u64,
+    pub timeout:      u64,
     pub default_tags: Tags,
 }
 
@@ -91,9 +90,7 @@ impl Bosun for BosunClient {
 }
 impl BosunClient {
     /// Creates a new BosunClient.
-    pub fn new(host: &str, timeout: u64) -> BosunClient {
-        Self::with_tags(host, timeout, Tags::new())
-    }
+    pub fn new(host: &str, timeout: u64) -> BosunClient { Self::with_tags(host, timeout, Tags::new()) }
 
     /// Creates a new BosunClient with default tags
     pub fn with_tags(host: &str, timeout: u64, default_tags: Tags) -> BosunClient {
@@ -157,11 +154,11 @@ impl BosunClient {
 /// Represents metric meta data.
 pub struct Metadata<'a> {
     /// Metric name
-    pub metric: &'a str,
+    pub metric:      &'a str,
     /// Metric rate type: [gauge, counter rate]
-    pub rate: &'a str,
+    pub rate:        &'a str,
     /// Metric unit
-    pub unit: &'a str,
+    pub unit:        &'a str,
     /// Metric description
     pub description: &'a str,
 }
@@ -171,10 +168,10 @@ impl<'a> Metadata<'a> {
     /// Creates new metric meta data.
     pub fn new(metric: &'a str, rate: &'a str, unit: &'a str, description: &'a str) -> Metadata<'a> {
         Metadata {
-            metric: metric,
-            rate: rate,
-            unit: unit,
-            description: description,
+            metric,
+            rate,
+            unit,
+            description,
         }
     }
 
@@ -203,13 +200,13 @@ impl<'a> Metadata<'a> {
 #[derive(Debug, Serialize)]
 pub struct Datum<'a> {
     /// Metric name
-    pub metric: &'a str,
+    pub metric:    &'a str,
     /// Unix timestamp in either _s_ or _ms_
     pub timestamp: i64,
     /// Value as string representation
-    pub value: &'a str,
+    pub value:     &'a str,
     /// Tags for this metric datum
-    pub tags: &'a Tags,
+    pub tags:      &'a Tags,
 }
 
 impl<'a> Datum<'a> {
@@ -222,12 +219,13 @@ impl<'a> Datum<'a> {
         tags: &'a Tags,
     ) -> Datum<'a> {
         Datum {
-            metric: metric,
-            timestamp: timestamp,
-            value: value,
-            tags: tags,
+            metric,
+            timestamp,
+            value,
+            tags,
         }
     }
+
     /// Creates a new metric datum with timestamp _now_.
     pub fn now(
         metric: &'a str,
@@ -236,10 +234,10 @@ impl<'a> Datum<'a> {
         tags: &'a Tags,
     ) -> Datum<'a> {
         Datum {
-            metric: metric,
+            metric,
             timestamp: now_in_ms(),
-            value: value,
-            tags: tags,
+            value,
+            tags,
         }
     }
 
@@ -264,13 +262,13 @@ pub fn now_in_ms() -> i64 {
 #[derive(Debug, Serialize)]
 struct InternalDatum<'a> {
     /// Metric name
-    pub metric: &'a str,
+    pub metric:    &'a str,
     /// Unix timestamp in either _s_ or _ms_
     pub timestamp: i64,
     /// Value as string representation
-    pub value: &'a str,
+    pub value:     &'a str,
     /// Tags for this metric datum
-    pub tags: HashMap<&'a str, &'a str>,
+    pub tags:      HashMap<&'a str, &'a str>,
 }
 
 impl<'a> From<&'a Datum<'a>> for InternalDatum<'a> {
@@ -306,25 +304,25 @@ impl<'a> InternalDatum<'a> {
 }
 
 #[derive(Debug, Serialize)]
-/* cf. https://github.com/bosun-monitor/bosun/blob/master/models/silence.go#L12. 28.11.2018
-    Start, End time.Time
-    Alert      string
-    Tags       opentsdb.TagSet
-    TagString  string
-    Forget     bool
-    User       string
-    Message    string
-*/
-// {"duration":"24h","tags":"host=doc-server-i-lukas","forget":null,"message":"Server has been terminated by ASG."}
+// cf. https://github.com/bosun-monitor/bosun/blob/master/models/silence.go#L12. 28.11.2018
+// Start, End time.Time
+// Alert      string
+// Tags       opentsdb.TagSet
+// TagString  string
+// Forget     bool
+// User       string
+// Message    string
+// {"duration":"24h","tags":"host=doc-server-i-lukas","forget":null,"message":"Server has been
+// terminated by ASG."}
 pub struct Silence {
     duration: String,
-    tags: String,
+    tags:     String,
     /// Bosun does not like bool, only Strings "true" or "false"
-    forget: String,
-    user: String,
-    message: String,
+    forget:   String,
+    user:     String,
+    message:  String,
     /// Bosun does not like bool, only Strings "true" or "false"
-    confirm: String,
+    confirm:  String,
 }
 
 impl Silence {
@@ -332,11 +330,11 @@ impl Silence {
         Silence {
             // TODO: These parameters should be config parameters
             duration: duration.to_string(),
-            tags: format!("host={}", host),
-            forget: "true".to_string(),
-            user: "kevin.lambda".to_string(),
-            message: "Host has been terminated by ASG.".to_string(),
-            confirm: "true".to_string(),
+            tags:     format!("host={}", host),
+            forget:   "true".to_string(),
+            user:     "kevin.lambda".to_string(),
+            message:  "Host has been terminated by ASG.".to_string(),
+            confirm:  "true".to_string(),
         }
     }
 }
@@ -344,9 +342,7 @@ impl Silence {
 pub mod testing {
     use super::*;
 
-    use std::cell::RefCell;
-    use std::collections::HashMap;
-    use std::rc::Rc;
+    use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
     #[derive(PartialEq, Eq, Debug)]
     pub struct BosunMockClient {
@@ -388,8 +384,8 @@ pub mod testing {
 
     #[derive(PartialEq, Eq, Debug)]
     pub struct BosunCallStats {
-        pub metadata_count: u32,
-        pub datum_count: u32,
+        pub metadata_count:    u32,
+        pub datum_count:       u32,
         pub set_silence_count: u32,
     }
 
@@ -408,8 +404,8 @@ pub mod testing {
             let stats = self.stats.borrow_mut();
 
             BosunCallStats {
-                metadata_count: *stats.get("metadata").unwrap_or(&0),
-                datum_count: *stats.get("datum").unwrap_or(&0),
+                metadata_count:    *stats.get("metadata").unwrap_or(&0),
+                datum_count:       *stats.get("datum").unwrap_or(&0),
                 set_silence_count: *stats.get("set_silence").unwrap_or(&0),
             }
         }

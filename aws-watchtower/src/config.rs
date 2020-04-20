@@ -1,5 +1,4 @@
-use crate::asg_mapping::Mappings;
-use crate::AwsWatchtowerError;
+use crate::{asg_mapping::Mappings, AwsWatchtowerError};
 
 use aws::kms;
 use clams::config::*;
@@ -11,7 +10,7 @@ use std::collections::HashMap;
 #[derive(Config, PartialEq, Deserialize, Serialize, Debug)]
 pub struct EncryptedFunctionConfig {
     pub bosun: Bosun,
-    pub asg: Asg,
+    pub asg:   Asg,
 }
 
 impl EncryptedFunctionConfig {
@@ -31,44 +30,42 @@ impl EncryptedFunctionConfig {
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct Bosun {
-    pub host: String,
-    pub user: String,
+    pub host:     String,
+    pub user:     String,
     pub password: String,
-    pub timeout: Option<u64>,
-    pub tags: HashMap<String, String>,
+    pub timeout:  Option<u64>,
+    pub tags:     HashMap<String, String>,
 }
 
 impl Bosun {
-    pub fn uri(&self) -> String {
-        format!("https://{}:{}@{}", &self.user, &self.password, &self.host)
-    }
+    pub fn uri(&self) -> String { format!("https://{}:{}@{}", &self.user, &self.password, &self.host) }
 }
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct Asg {
     pub scaledown_silence_duration: String,
-    pub mappings: Mappings,
+    pub mappings:                   Mappings,
 }
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct FunctionConfig {
     pub bosun: Bosun,
-    pub asg: Asg,
+    pub asg:   Asg,
 }
 
 impl Default for FunctionConfig {
     fn default() -> Self {
         let bosun = Bosun {
-            host: "localhost:8070".to_string(),
-            user: "bosun".to_string(),
+            host:     "localhost:8070".to_string(),
+            user:     "bosun".to_string(),
             password: "bosun".to_string(),
-            timeout: Some(5),
-            tags: HashMap::new(),
+            timeout:  Some(5),
+            tags:     HashMap::new(),
         };
 
         let asg = Asg {
             scaledown_silence_duration: "24h".to_string(),
-            mappings: Mappings { items: Vec::new() },
+            mappings:                   Mappings { items: Vec::new() },
         };
 
         FunctionConfig { bosun, asg }
@@ -138,13 +135,13 @@ host_prefix = 'import-'
         let asg_mappings = Mappings {
             items: vec![
                 Mapping {
-                    search: "webserver".to_string(),
-                    tag_name: "webserver".to_string(),
+                    search:      "webserver".to_string(),
+                    tag_name:    "webserver".to_string(),
                     host_prefix: "webserver-".to_string(),
                 },
                 Mapping {
-                    search: "import".to_string(),
-                    tag_name: "import".to_string(),
+                    search:      "import".to_string(),
+                    tag_name:    "import".to_string(),
                     host_prefix: "import-".to_string(),
                 },
             ],

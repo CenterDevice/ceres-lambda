@@ -1,10 +1,8 @@
-use crate::config::FunctionConfig;
-use crate::events::HandleResult;
+use crate::{config::FunctionConfig, events::HandleResult};
 use bosun::Bosun;
 use failure::Error;
 use lambda_runtime::Context;
 use log::info;
-use serde;
 use serde_derive::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -15,21 +13,20 @@ pub struct Ping {
 pub fn handle<T: Bosun>(ping: Ping, _: &Context, _: &FunctionConfig, _: &T) -> Result<HandleResult, Error> {
     info!("Received {:?}.", ping);
 
-    Ok(HandleResult::Ping{ echo_reply: "Echo reply".to_string()})
+    Ok(HandleResult::Ping {
+        echo_reply: "Echo reply".to_string(),
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::Event;
-    use super::*;
+    use super::{super::Event, *};
 
-    use spectral::prelude::*;
     use serde_json::json;
+    use spectral::prelude::*;
     use testing;
 
-    fn setup() {
-        testing::setup();
-    }
+    fn setup() { testing::setup(); }
 
     #[test]
     fn parse_event_ping() {
@@ -53,7 +50,9 @@ mod tests {
     fn serialize_handle_result() {
         setup();
 
-        let result = HandleResult::Ping{ echo_reply: "Echo reply".to_string()};
+        let result = HandleResult::Ping {
+            echo_reply: "Echo reply".to_string(),
+        };
 
         let res = serde_json::to_string(&result);
         println!("Serialized = {:?}", res);

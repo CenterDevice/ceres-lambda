@@ -27,9 +27,9 @@ fn do_decrypt_base64(base64_str: &str) -> Result<String, Error> {
     // TODO: Region should be configurable; or ask the environment of this call
     let kms = KmsClient::new_with(http_client, credentials_provider, Region::EuCentral1);
     let decrypt_request = DecryptRequest {
-        ciphertext_blob: blob,
+        ciphertext_blob:    blob,
         encryption_context: None,
-        grant_tokens: None,
+        grant_tokens:       None,
     };
     let res = kms.decrypt(decrypt_request).sync();
     debug!("Finished decrypting base64 str; success={}.", res.is_ok());

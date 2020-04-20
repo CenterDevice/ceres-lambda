@@ -1,25 +1,23 @@
-use crate::config::FunctionConfig;
-use crate::error::AwsWatchtowerError;
-use crate::lambda::LambdaResult;
+use crate::{config::FunctionConfig, error::AwsWatchtowerError, lambda::LambdaResult};
 use failure::Error;
 use lambda_runtime::{error::HandlerError, Context};
 use lazy_static;
 use log::info;
 use serde;
 use serde_json::Value;
-use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 mod asg_mapping;
-mod metrics;
 pub mod config;
 pub mod error;
 mod events;
 mod init;
 mod lambda;
+mod metrics;
 
 // Use a counter, in case we want to track how often the function gets called before getting cold
 // again.
-static INVOCATION_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
+static INVOCATION_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 lazy_static::lazy_static! {
     static ref CONFIG: FunctionConfig = init::config()

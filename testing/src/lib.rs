@@ -1,6 +1,6 @@
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 
-pub static INIT: Once = ONCE_INIT;
+pub static INIT: Once = Once::new();
 
 /// Setup function that is only run once, even if called multiple times.
 pub fn setup() {

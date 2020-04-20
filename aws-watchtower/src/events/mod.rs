@@ -1,12 +1,9 @@
-use crate::config::FunctionConfig;
-use crate::error::AwsWatchtowerError;
-use crate::metrics;
+use crate::{config::FunctionConfig, error::AwsWatchtowerError, metrics};
 use aws::ec2::{asg::AsgScalingInfo, ebs::VolumeInfo};
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
 use lambda_runtime::Context;
 use log::debug;
-use serde;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{self, Value};
 
@@ -43,8 +40,7 @@ pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bos
     let datum = Datum::now(metrics::LAMBDA_INVOCATION_COUNT, "1", &tags);
     bosun.emit_datum(&datum)?;
 
-    let res = parse_event(json)
-      .and_then(|event| handle_event(event, ctx, &config, bosun));
+    let res = parse_event(json).and_then(|event| handle_event(event, ctx, &config, bosun));
 
     match res {
         Ok(_) => {
@@ -61,13 +57,19 @@ pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bos
 }
 
 fn parse_event(json: Value) -> Result<Event, Error> {
-    let event = serde_json::from_value(json.clone()).map_err(|e| e.context(AwsWatchtowerError::FailedParseEvent(json.to_string())))?;
+    let event = serde_json::from_value(json.clone())
+        .map_err(|e| e.context(AwsWatchtowerError::FailedParseEvent(json.to_string())))?;
     debug!("Parsed event = {:?}.", event);
 
     Ok(event)
 }
 
-fn handle_event<T: Bosun>(event: Event, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
+fn handle_event<T: Bosun>(
+    event: Event,
+    ctx: &Context,
+    config: &FunctionConfig,
+    bosun: &T,
+) -> Result<HandleResult, Error> {
     match event {
         Event::Asg(asg) => asg::handle(asg, ctx, config, bosun),
         Event::Ebs(ebs) => ebs::handle(ebs, ctx, config, bosun),
@@ -82,7 +84,6 @@ mod tests {
     use crate::asg_mapping::{Mapping, Mappings};
     use bosun::testing::{BosunCallStats, BosunMockClient};
 
-    use env_logger;
     use serde_json::json;
     use spectral::prelude::*;
     use testing::setup;
@@ -132,8 +133,8 @@ mod tests {
         let mut config = FunctionConfig::default();
         config.asg.mappings = Mappings {
             items: vec![Mapping {
-                search: "my".to_string(),
-                tag_name: "my".to_string(),
+                search:      "my".to_string(),
+                tag_name:    "my".to_string(),
                 host_prefix: "my-server-".to_string(),
             }],
         };

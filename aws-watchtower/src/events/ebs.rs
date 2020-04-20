@@ -1,15 +1,11 @@
-use crate::config::FunctionConfig;
-use crate::events::HandleResult;
-use crate::metrics;
+use crate::{config::FunctionConfig, events::HandleResult, metrics};
 
 use aws::{self, AwsError};
-use bosun::{ Bosun, Datum, Tags};
+use bosun::{Bosun, Datum, Tags};
 use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
-use serde;
 use serde_derive::Deserialize;
-use serde_json;
 use std::fmt;
 
 // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-cloud-watch-events.html
@@ -33,22 +29,22 @@ use std::fmt;
 // }
 #[derive(Debug, Deserialize)]
 pub struct VolumeEvent {
-    pub version: String,
-    pub id: String,
+    pub version:     String,
+    pub id:          String,
     #[serde(rename = "detail-type")]
     pub detail_type: String,
-    pub account: String,
-    pub time: String,
-    pub region: String,
-    pub resources: Vec<String>,
-    pub detail: VolumeEventDetail,
+    pub account:     String,
+    pub time:        String,
+    pub region:      String,
+    pub resources:   Vec<String>,
+    pub detail:      VolumeEventDetail,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct VolumeEventDetail {
-    event: VolumeEventType,
-    result: VolumeResult,
-    cause: String,
+    event:      VolumeEventType,
+    result:     VolumeResult,
+    cause:      String,
     #[serde(rename = "request-id")]
     request_id: String,
 }
@@ -101,7 +97,12 @@ impl fmt::Display for VolumeResult {
     }
 }
 
-pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
+pub fn handle<T: Bosun>(
+    event: VolumeEvent,
+    _: &Context,
+    _config: &FunctionConfig,
+    bosun: &T,
+) -> Result<HandleResult, Error> {
     info!("Received VolumeEvent {:?}.", event);
 
     let change_value = match &event.detail.event {
@@ -124,11 +125,14 @@ pub fn handle<T: Bosun>(event: VolumeEvent, _: &Context, _config: &FunctionConfi
             1
         };
 
-        let volume_arn = event.resources.first()
+        let volume_arn = event
+            .resources
+            .first()
             .ok_or_else(|| Error::from(AwsError::GeneralError("no volume ids found in event")))?;
         let volume_info = aws::ec2::ebs::get_volume_info_by_arn(volume_arn.to_string())?;
-        info!("Details for '{}' created volume: '{:?}'",
-            if value == 0 {"successfully"} else {"unsucessfully"},
+        info!(
+            "Details for '{}' created volume: '{:?}'",
+            if value == 0 { "successfully" } else { "unsucessfully" },
             volume_info
         );
 
@@ -207,17 +211,18 @@ mod tests {
         assert_that(&event).is_ok();
     }
 
-
     #[test]
     fn serialize_handle_result() {
         testing::setup();
 
         let volume_info = VolumeInfo {
-            volume_id: "012345678901".to_string(),
+            volume_id:   "012345678901".to_string(),
             create_time: "yyyy-mm-ddThh:mm:ssZ".to_string(),
-            state: "in-use".to_string(),
-            kms_key_id: Some("arn:aws:kms:sa-east-1:0123456789ab:key/01234567-0123-0123-0123-0123456789ab".to_string()),
-            encrypted: true,
+            state:       "in-use".to_string(),
+            kms_key_id:  Some(
+                "arn:aws:kms:sa-east-1:0123456789ab:key/01234567-0123-0123-0123-0123456789ab".to_string(),
+            ),
+            encrypted:   true,
         };
         let result = HandleResult::VolumeInfo { volume_info };
 
