@@ -10,11 +10,11 @@ local:
 todos:
 	rg --vimgrep -g '!Makefile' -i todo 
 
-RUN_DOCKER = docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE)
+RUN_DOCKER = docker run --rm -t -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git -v "$$(pwd)/.cargo.cache/registry":/home/rust/.cargo/registry $(DOCKER_BUILD_IMAGE)
 
 .cargo.cache/git:
 	mkdir -p $@
-	#docker run --rm -it -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/git
+	#docker run --rm -t -v "$$(pwd)/..":/home/rust/src -v "$$(pwd)/.cargo.cache/git":/home/rust/.cargo/git $(DOCKER_BUILD_IMAGE) sudo chown -R rust:rust /home/rust/.cargo/git
 	$(RUN_DOCKER) sudo chown -R rust:rust /home/rust/.cargo/git
 
 .cargo.cache/registry:

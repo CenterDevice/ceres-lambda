@@ -5,7 +5,7 @@ name: $(Build.sourceBranchName)-$(Date:yyyyMMdd)$(Rev:.r)
 # Set global variables
 variables:
   crate_name: 'ceres-lambda'
-  rust_minimum_version: 1.41.1
+  rust_minimum_version: 1.41.0
   # cf. https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/hosted?view=azure-devops
   linux_image_name: 'ubuntu-18.04'
 
@@ -50,13 +50,15 @@ stages:
               rustup_toolchain: stable
         pool:
           vmImage: $(imageName)
+        # Let's use this image, because it has cargo audit already installed.
+        container:
+          image: ekidd/rust-musl-builder:$(rustup_toolchain)
+          options: --user 0:0
         steps:
-          - template: templates/install_rust.yml
-            parameters:
-              rustup_toolchain: $(rustup_toolchain)
-          - template: templates/version_information.yml
-          - script: cargo install cargo-audit
-            displayName: Install Cargo Audit
+          # Azure is not using the designated user of the image that has been configured to execute Rust
+          - script: |
+              cp -r /home/rust/.cargo /home/rust/.rustup $HOME
+            displayName: Prepare Container
           - template: templates/version_information.yml
           - script: cargo audit
             displayName: Run Cargo Audit
@@ -78,38 +80,38 @@ stages:
           - script: cargo clippy --all --all-features -- -D warnings $(source ".clippy.args")
             displayName: Run Clippy
 
-            #      - job: 'Build_n_Test'
-            #        displayName: "Build and Test"
-            #        strategy:
-            #          matrix:
-            #            mac-minimum-${{ variables.rust_minimum_version }}:
-            #              imageName: ${{ variables.macos_image_name }}
-            #              rustup_toolchain: ${{ variables.rust_minimum_version }}
-            #            mac-stable:
-            #               imageName: ${{ variables.macos_image_name }}
-            #               rustup_toolchain: stable
-            #            linux-minimum-${{ variables.rust_minimum_version }}:
-            #              imageName: ${{ variables.linux_image_name }}
-            #              rustup_toolchain: ${{ variables.rust_minimum_version }}
-            #            linux-stable:
-            #              imageName: ${{ variables.linux_image_name }}
-            #              rustup_toolchain: stable
-            #            linux-beta:
-            #              imageName: ${{ variables.linux_image_name }}
-            #              rustup_toolchain: beta
-            #        pool:
-            #          vmImage: $(imageName)
-            #        steps:
-            #          - template: templates/install_rust.yml
-            #            parameters:
-            #              rustup_toolchain: $(rustup_toolchain)
-            #          - template: templates/install_dependencies.yml
-            #          - template: templates/version_information.yml
-            #          - script: cargo build --all --all-features --tests --examples --benches
-            #            displayName: Cargo build
-            #          - script: cargo test --all --all-features --examples
-            #            displayName: Cargo test
-            #
+      - job: 'Build_n_Test'
+        displayName: "Build and Test"
+        strategy:
+          matrix:
+            linux-minimum-${{ variables.rust_minimum_version }}:
+              imageName: ${{ variables.linux_image_name }}
+              rustup_toolchain: ${{ variables.rust_minimum_version }}
+            linux-stable:
+              imageName: ${{ variables.linux_image_name }}
+              rustup_toolchain: stable
+            linux-beta:
+              imageName: ${{ variables.linux_image_name }}
+              rustup_toolchain: beta
+        pool:
+          vmImage: $(imageName)
+        container:
+          image: ekidd/rust-musl-builder:$(rustup_toolchain)
+          options: --user 0:0
+        steps:
+          - template: templates/install_dependencies.yml
+          # Azure is not using the designated user of the image that has been configured to execute Rust
+          - script: |
+              cp -r /home/rust/.cargo /home/rust/.rustup $HOME
+            displayName: Prepare Container
+          - template: templates/version_information.yml
+          - script: |
+              cargo build --all --all-features
+            displayName: Cargo build
+          - script: |
+              cargo test --all --all-features
+            displayName: Cargo test
+
             #  - stage: Build_Release_Artefacts
             #    dependsOn: Check_Build_Test
             #    displayName: "Build Release Artefacts"
