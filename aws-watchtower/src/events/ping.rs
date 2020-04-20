@@ -29,6 +29,7 @@ mod tests {
     fn setup() { testing::setup(); }
 
     #[test]
+    #[allow(clippy::assertions_on_constants)]
     fn parse_event_ping() {
         setup();
 

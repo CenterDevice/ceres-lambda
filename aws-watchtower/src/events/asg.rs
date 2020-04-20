@@ -163,7 +163,7 @@ mod tests {
     fn setup() { testing::setup(); }
 
     fn asg_success_full_termination_event() -> AutoScalingEvent {
-        let asg = AutoScalingEvent {
+        AutoScalingEvent {
             version:     "0".to_string(),
             id:          "12345678-1234-1234-1234-123456789012".to_string(),
             detail_type: "EC2 Instance Terminate Successful".to_string(),
@@ -176,8 +176,7 @@ mod tests {
                 ec2_instance_id:         "i-1234567890abcdef0".to_string(),
                 auto_scaling_group_name: "my-auto-scaling-group".to_string(),
             },
-        };
-        asg
+        }
     }
 
     #[test]

@@ -13,6 +13,7 @@ pub mod ping;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "source")]
+#[allow(clippy::large_enum_variant)]
 pub enum Event {
     #[serde(rename = "aws.autoscaling")]
     Asg(asg::AutoScalingEvent),

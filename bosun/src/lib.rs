@@ -133,7 +133,7 @@ impl BosunClient {
             let username = url.username();
             let password = url.password();
             match (username, password) {
-                (u, Some(_)) if u.len() > 0 => req.basic_auth(username, password),
+                (u, Some(_)) if !u.is_empty() => req.basic_auth(username, password),
                 _ => req,
             }
         } else {
@@ -400,7 +400,7 @@ pub mod testing {
     }
 
     impl BosunMockClient {
-        pub fn to_stats(self) -> BosunCallStats {
+        pub fn to_stats(&self) -> BosunCallStats {
             let stats = self.stats.borrow_mut();
 
             BosunCallStats {
@@ -438,7 +438,7 @@ mod tests {
         let mut default_tags = Tags::new();
         default_tags.insert("default_tag1".to_string(), "value1".to_string());
         let tags = Tags::new();
-        let datum = Datum::new("a_test_metric", 1545918681110, "42", &tags);
+        let datum = Datum::new("a_test_metric", 1_545_918_681_110, "42", &tags);
         let mut internal_datum: InternalDatum = (&datum).into();
         internal_datum.add_tags(&default_tags);
 
