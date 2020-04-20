@@ -1,0 +1,258 @@
+---
+
+name: $(Build.sourceBranchName)-$(Date:yyyyMMdd)$(Rev:.r)
+
+# Set global variables
+variables:
+  crate_name: 'ceres-lambda'
+  rust_minimum_version: 1.41.1
+  # cf. https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/hosted?view=azure-devops
+  linux_image_name: 'ubuntu-18.04'
+
+trigger:
+  branches:
+    include: ['*']
+  tags:
+    include: ['*']
+
+schedules:
+  - cron: "0 0 * * *"
+    displayName: Daily midnight build
+    branches:
+      include:
+        - master
+
+stages:
+  - stage: Check_Build_Test
+    displayName: "Check, Build, and Test"
+    jobs:
+      - job: Fmt
+        strategy:
+          matrix:
+            linux-nightly:
+              imageName: ${{ variables.linux_image_name }}
+              rustup_toolchain: nightly
+        pool:
+          vmImage: $(imageName)
+        container:
+          image: ekidd/rust-musl-builder:$(rustup_toolchain)
+          # Required, because Azure is going to add a user which requires root privileges
+          options: --user 0:0
+        steps:
+          - template: templates/install_dependencies.yml
+          - script: |
+              rustup component add rustfmt
+            displayName: Installing additional Rust components
+          - template: templates/version_information.yml
+          - script: cargo fmt -- --check
+            displayName: Run Fmt
+
+            #      - job: Audit
+            #        strategy:
+            #          matrix:
+            #            linux-stable:
+            #              imageName: ${{ variables.linux_image_name }}
+            #              rustup_toolchain: stable
+            #        pool:
+            #          vmImage: $(imageName)
+            #        steps:
+            #          - template: templates/install_rust.yml
+            #            parameters:
+            #              rustup_toolchain: $(rustup_toolchain)
+            #          - template: templates/install_dependencies.yml
+            #          - script: cargo install cargo-audit
+            #            displayName: Install Cargo Audit
+            #          - template: templates/version_information.yml
+            #          - script: cargo audit
+            #            displayName: Run Cargo Audit
+            #
+            #      - job: Clippy
+            #        strategy:
+            #          matrix:
+            #            mac-stable:
+            #              imageName: ${{ variables.macos_image_name }}
+            #              rustup_toolchain: stable
+            #            linux-stable:
+            #              imageName: ${{ variables.linux_image_name }}
+            #              rustup_toolchain: stable
+            #        pool:
+            #          vmImage: $(imageName)
+            #        steps:
+            #          - template: templates/install_rust.yml
+            #            parameters:
+            #              rustup_toolchain: $(rustup_toolchain)
+            #          - template: templates/install_dependencies.yml
+            #          - template: templates/version_information.yml
+            #          - script: cargo clippy --all --all-features -- -D warnings $(source ".clippy.args")
+            #            displayName: Run Clippy
+            #
+            #      - job: 'Build_n_Test'
+            #        displayName: "Build and Test"
+            #        strategy:
+            #          matrix:
+            #            mac-minimum-${{ variables.rust_minimum_version }}:
+            #              imageName: ${{ variables.macos_image_name }}
+            #              rustup_toolchain: ${{ variables.rust_minimum_version }}
+            #            mac-stable:
+            #               imageName: ${{ variables.macos_image_name }}
+            #               rustup_toolchain: stable
+            #            linux-minimum-${{ variables.rust_minimum_version }}:
+            #              imageName: ${{ variables.linux_image_name }}
+            #              rustup_toolchain: ${{ variables.rust_minimum_version }}
+            #            linux-stable:
+            #              imageName: ${{ variables.linux_image_name }}
+            #              rustup_toolchain: stable
+            #            linux-beta:
+            #              imageName: ${{ variables.linux_image_name }}
+            #              rustup_toolchain: beta
+            #        pool:
+            #          vmImage: $(imageName)
+            #        steps:
+            #          - template: templates/install_rust.yml
+            #            parameters:
+            #              rustup_toolchain: $(rustup_toolchain)
+            #          - template: templates/install_dependencies.yml
+            #          - template: templates/version_information.yml
+            #          - script: cargo build --all --all-features --tests --examples --benches
+            #            displayName: Cargo build
+            #          - script: cargo test --all --all-features --examples
+            #            displayName: Cargo test
+            #
+            #  - stage: Build_Release_Artefacts
+            #    dependsOn: Check_Build_Test
+            #    displayName: "Build Release Artefacts"
+            #    jobs:
+            #      - job: 'Build_Static_Linux_Binary'
+            #        displayName: "Build Static Linux Binary"
+            #        pool:
+            #          vmImage: ${{ variables.linux_image_name }}
+            #        container:
+            #          image: lukaspustina/rust_musl:stable
+            #          # Required, because Azure is going to add a user which requires root privileges
+            #          options: --user 0:0
+            #        steps:
+            #          # The Docker Image already includes a rustup installation but for user 'rust'. Since Azure uses its own user (cf. above), we install it again.
+            #          - template: templates/install_rust.yml
+            #            parameters:
+            #              rustup_toolchain: stable
+            #          - template: templates/version_information.yml
+            #          - script: |
+            #              cd $BUILD_SOURCESDIRECTORY && \
+            #              cargo build --all --all-features --release && \
+            #              ls -al target/release/${CRATE_BIN_NAME} && \
+            #              echo "##vso[task.setvariable variable=static_linux_binary]target/release/${CRATE_BIN_NAME}"
+            #            displayName: Build MUSL Static Binary
+            #          - publish: $(Build.SourcesDirectory)/$(static_linux_binary)
+            #            artifact: Static_Linux_Binary
+            #            displayName: Store Static Linux Binary
+            #      - job: 'Deb_Pkg'
+            #        displayName: "Build Debian Package"
+            #        strategy:
+            #          matrix:
+            #            ubuntu-bionic:
+            #              imageName: ${{ variables.linux_image_name }}
+            #              ubuntuName: bionic
+            #              archName: amd64
+            #        pool:
+            #          vmImage: $(imageName)
+            #        steps:
+            #          - template: templates/install_rust.yml
+            #            parameters:
+            #              rustup_toolchain: stable
+            #          - template: templates/install_dependencies.yml
+            #          - template: templates/version_information.yml
+            #          - script: cargo build --all --all-features --release
+            #            displayName: Cargo build Release
+            #          # `echo` is shell built-in and does not pick up env vars on the same cli line
+            #          - script: |
+            #              (cd .distribution/deb && ARCH=${ARCHNAME} DIST=${UBUNTUNAME} make package) && \
+            #              DEB_PKG=$(ls .distribution/deb/*.deb) && echo "##vso[task.setvariable variable=deb_pkg]${DEB_PKG}"
+            #            displayName: Create Debian Package
+            #          - publish: $(Build.SourcesDirectory)/$(deb_pkg)
+            #            artifact: Deb_Pkg
+            #            displayName: Store Debian Package
+            #
+            #  - stage: Publish_Release
+            #    displayName: "Publish Release"
+            #    dependsOn: Build_Release_Artefacts
+            #    condition: startsWith(variables['build.sourceBranch'], 'refs/tags/')
+            #    jobs:
+            #      - job: 'Publish_To_GitHub'
+            #        displayName: "Publish to GitHub"
+            #        steps:
+            #          # Shortcut 'download' cannot be used as it does not restore into the original path; cf. https://docs.microsoft.com/en-us/azure/devops/pipelines/artifacts/pipeline-artifacts?view=azure-devops&tabs=yaml#downloading-artifacts
+            #          - task: DownloadPipelineArtifact@2
+            #            inputs:
+            #              buildType: 'current'
+            #              artifactName: 'Static_Linux_Binary'
+            #              targetPath: '$(Build.ArtifactStagingDirectory)' 
+            #            displayName: "Download Static Linux Binary"
+            #          - task: DownloadPipelineArtifact@2
+            #            inputs:
+            #              buildType: 'current'
+            #              artifactName: 'Deb_Pkg'
+            #              targetPath: '$(Build.ArtifactStagingDirectory)' 
+            #            displayName: "Download Debian Package"
+            #          - script: |
+            #              ls -al $BUILD_ARTIFACTSTAGINGDIRECTORY && \
+            #              mv "$BUILD_ARTIFACTSTAGINGDIRECTORY/${CRATE_BIN_NAME}" "$BUILD_ARTIFACTSTAGINGDIRECTORY/${CRATE_BIN_NAME}-$AGENT_OSARCHITECTURE-musl-static" && \
+            #              ls -al $BUILD_ARTIFACTSTAGINGDIRECTORY
+            #            displayName: "Prepare Assets for Upload"
+            #          - task: GitHubRelease@0
+            #            displayName: "Create GitHub Release"
+            #            inputs:
+            #              gitHubConnection: 'lukaspustina-releaseupload'
+            #              repositoryName: '$(Build.Repository.Name)' 
+            #              action: create
+            #              target: '$(Build.SourceVersion)'
+            #              tagSource: 'auto'
+            #              tagPattern: 'v.*'
+            #              tag: $(tagName)
+            #              assets: $(Build.ArtifactStagingDirectory)/*
+            #              assetUploadMode: 'delete'
+            #              isDraft: false
+            #              isPreRelease: false
+            #              addChangeLog: true
+            #              compareWith: 'lastFullRelease'
+            #      - job: 'Publish_To_PackageCloud'
+            #        displayName: "Publish to PackageCloud"
+            #        strategy:
+            #          matrix:
+            #            centerdevice:
+            #              package_cloud_token: $(PACKAGECLOUD_API_TOKEN_CENTERDEVICE)
+            #              package_cloud_repo: centerdevice/infrastructure
+            #        steps:
+            #          - task: UseRubyVersion@0
+            #            inputs:
+            #              versionSpec: '>= 2.4'
+            #              addToPath: true
+            #            displayName: "Install Ruby"
+            #          - script: gem install package_cloud
+            #            displayName: 'Install PackageCloud CLI'
+            #          - task: DownloadPipelineArtifact@2
+            #            inputs:
+            #              buildType: 'current'
+            #              artifactName: 'Deb_Pkg'
+            #              targetPath: '$(Build.ArtifactStagingDirectory)' 
+            #            displayName: "Download Debian Package"
+            #          - script: |
+            #              ls -al $BUILD_ARTIFACTSTAGINGDIRECTORY && \
+            #              package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/bionic ${BUILD_ARTIFACTSTAGINGDIRECTORY}/*.deb
+            #            displayName: 'Upload Debian Package to PackageCloud'
+            #            env:
+            #              PACKAGECLOUD_TOKEN: $(package_cloud_token)
+            #              PACKAGECLOUD_REPO: $(package_cloud_repo)
+            #              # Deactivated as long as hubcups does not get a newer official version that includes rustls
+            #              #       - job: 'Publish_To_Crates_Io'
+            #              #         displayName: "Publish to crates.io"
+            #              #         steps:
+            #              #           - template: templates/install_rust.yml
+            #              #             parameters:
+            #              #               rustup_toolchain: stable
+            #              #           - template: templates/install_dependencies.yml
+            #              #           - template: templates/version_information.yml
+            #              #           - script: cargo publish
+            #              #             displayName: "Cargo publish"
+            #              #             env:
+            #              #               CARGO_REGISTRY_TOKEN: $(CARGO_REGISTRY_TOKEN)
+            #              # 
