@@ -34,58 +34,50 @@ stages:
               rustup_toolchain: nightly
         pool:
           vmImage: $(imageName)
-        container:
-          image: ekidd/rust-musl-builder:$(rustup_toolchain)
-          # Required, because Azure is going to add a user which requires root privileges
-          options: --user 0:0
         steps:
-          - template: templates/install_dependencies.yml
-          - script: |
-              rustup component add rustfmt
-            displayName: Installing additional Rust components
+          - template: templates/install_rust.yml
+            parameters:
+              rustup_toolchain: $(rustup_toolchain)
           - template: templates/version_information.yml
           - script: cargo fmt -- --check
             displayName: Run Fmt
 
-            #      - job: Audit
-            #        strategy:
-            #          matrix:
-            #            linux-stable:
-            #              imageName: ${{ variables.linux_image_name }}
-            #              rustup_toolchain: stable
-            #        pool:
-            #          vmImage: $(imageName)
-            #        steps:
-            #          - template: templates/install_rust.yml
-            #            parameters:
-            #              rustup_toolchain: $(rustup_toolchain)
-            #          - template: templates/install_dependencies.yml
-            #          - script: cargo install cargo-audit
-            #            displayName: Install Cargo Audit
-            #          - template: templates/version_information.yml
-            #          - script: cargo audit
-            #            displayName: Run Cargo Audit
-            #
-            #      - job: Clippy
-            #        strategy:
-            #          matrix:
-            #            mac-stable:
-            #              imageName: ${{ variables.macos_image_name }}
-            #              rustup_toolchain: stable
-            #            linux-stable:
-            #              imageName: ${{ variables.linux_image_name }}
-            #              rustup_toolchain: stable
-            #        pool:
-            #          vmImage: $(imageName)
-            #        steps:
-            #          - template: templates/install_rust.yml
-            #            parameters:
-            #              rustup_toolchain: $(rustup_toolchain)
-            #          - template: templates/install_dependencies.yml
-            #          - template: templates/version_information.yml
-            #          - script: cargo clippy --all --all-features -- -D warnings $(source ".clippy.args")
-            #            displayName: Run Clippy
-            #
+      - job: Audit
+        strategy:
+          matrix:
+            linux-stable:
+              imageName: ${{ variables.linux_image_name }}
+              rustup_toolchain: stable
+        pool:
+          vmImage: $(imageName)
+        steps:
+          - template: templates/install_rust.yml
+            parameters:
+              rustup_toolchain: $(rustup_toolchain)
+          - template: templates/version_information.yml
+          - script: cargo install cargo-audit
+            displayName: Install Cargo Audit
+          - template: templates/version_information.yml
+          - script: cargo audit
+            displayName: Run Cargo Audit
+
+      - job: Clippy
+        strategy:
+          matrix:
+            linux-stable:
+              imageName: ${{ variables.linux_image_name }}
+              rustup_toolchain: stable
+        pool:
+          vmImage: $(imageName)
+        steps:
+          - template: templates/install_rust.yml
+            parameters:
+              rustup_toolchain: $(rustup_toolchain)
+          - template: templates/install_dependencies.yml
+          - template: templates/version_information.yml
+          - script: cargo clippy --all --all-features -- -D warnings $(source ".clippy.args")
+            displayName: Run Clippy
+
             #      - job: 'Build_n_Test'
             #        displayName: "Build and Test"
             #        strategy:
