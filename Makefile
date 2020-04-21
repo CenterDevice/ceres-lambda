@@ -13,8 +13,11 @@ clippy:
 fmt:
 	cargo +nightly fmt
 
+fmt-check:
+	cargo +nightly fmt -- --check
+
 audit:
-	cargo audit --deny-warnings
+	cargo audit
 
 release: release-bump build
 	git commit -am "Bump to version $$(cargo read-manifest | jq .version)"
