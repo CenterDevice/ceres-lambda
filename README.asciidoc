@@ -1,7 +1,8 @@
 = CEnteRdEvice Sre (ceres) -- Lambda Functions
+
 Ceres the goddess of agriculture, grain crops, fertility and motherly relationships sometimes used to use AWS Lambda Functions to get ops stuff done.
 
-image:https://travis-ci.org/centerdevice/ceres-lambda.svg?branch=master[link="https://travis-ci.org/CenterDevice/ceres-lambda"] image:https://codecov.io/gh/centerdevice/ceres-lambda/branch/master/graph/badge.svg[link="https://codecov.io/gh/centerdevice/ceres-lambda"] image:https://img.shields.io/github/release/centerdevice/ceres-lambda.svg[link="https://github.com/centerdevice/ceres-lambda/releases"] image:https://img.shields.io/badge/license-MIT-blue.svg?label=License[link="./LICENSE]
+image:https://dev.azure.com/centerdevice/ceres-lambda/_apis/build/status/CenterDevice.ceres-lambda?branchName=master[link="https://dev.azure.com/centerdevice/ceres-lambda/_build/latest?definitionId=17&branchName=master"] image:https://img.shields.io/github/release/centerdevice/ceres-lambda.svg[link="https://github.com/centerdevice/ceres-lambda/releases"] image:https://img.shields.io/badge/license-MIT-blue.svg?label=License[link="./LICENSE]
 
 == Functions
 
