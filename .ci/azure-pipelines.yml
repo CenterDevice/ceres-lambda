@@ -134,39 +134,13 @@ stages:
           - template: templates/version_information.yml
           - script: |
               cargo build --all --all-features --release
-              ls -al target/release/${CRATE_BIN_NAME}
-              echo "##vso[task.setvariable variable=static_linux_binary]target/release/${CRATE_BIN_NAME}"
+              ls -al target/release/aws-watchtower
+              echo "##vso[task.setvariable variable=static_linux_binary]target/release/aws-watchtower"
             displayName: Build MUSL Static Binary
           - publish: $(Build.SourcesDirectory)/$(static_linux_binary)
             artifact: Static_Linux_Binary
             displayName: Store Static Linux Binary
-            #      - job: 'Deb_Pkg'
-            #        displayName: "Build Debian Package"
-            #        strategy:
-            #          matrix:
-            #            ubuntu-bionic:
-            #              imageName: ${{ variables.linux_image_name }}
-            #              ubuntuName: bionic
-            #              archName: amd64
-            #        pool:
-            #          vmImage: $(imageName)
-            #        steps:
-            #          - template: templates/install_rust.yml
-            #            parameters:
-            #              rustup_toolchain: stable
-            #          - template: templates/install_dependencies.yml
-            #          - template: templates/version_information.yml
-            #          - script: cargo build --all --all-features --release
-            #            displayName: Cargo build Release
-            #          # `echo` is shell built-in and does not pick up env vars on the same cli line
-            #          - script: |
-            #              (cd .distribution/deb && ARCH=${ARCHNAME} DIST=${UBUNTUNAME} make package) && \
-            #              DEB_PKG=$(ls .distribution/deb/*.deb) && echo "##vso[task.setvariable variable=deb_pkg]${DEB_PKG}"
-            #            displayName: Create Debian Package
-            #          - publish: $(Build.SourcesDirectory)/$(deb_pkg)
-            #            artifact: Deb_Pkg
-            #            displayName: Store Debian Package
-            #
+
             #  - stage: Publish_Release
             #    displayName: "Publish Release"
             #    dependsOn: Build_Release_Artefacts
@@ -182,12 +156,6 @@ stages:
             #              artifactName: 'Static_Linux_Binary'
             #              targetPath: '$(Build.ArtifactStagingDirectory)' 
             #            displayName: "Download Static Linux Binary"
-            #          - task: DownloadPipelineArtifact@2
-            #            inputs:
-            #              buildType: 'current'
-            #              artifactName: 'Deb_Pkg'
-            #              targetPath: '$(Build.ArtifactStagingDirectory)' 
-            #            displayName: "Download Debian Package"
             #          - script: |
             #              ls -al $BUILD_ARTIFACTSTAGINGDIRECTORY && \
             #              mv "$BUILD_ARTIFACTSTAGINGDIRECTORY/${CRATE_BIN_NAME}" "$BUILD_ARTIFACTSTAGINGDIRECTORY/${CRATE_BIN_NAME}-$AGENT_OSARCHITECTURE-musl-static" && \
@@ -209,45 +177,3 @@ stages:
             #              isPreRelease: false
             #              addChangeLog: true
             #              compareWith: 'lastFullRelease'
-            #      - job: 'Publish_To_PackageCloud'
-            #        displayName: "Publish to PackageCloud"
-            #        strategy:
-            #          matrix:
-            #            centerdevice:
-            #              package_cloud_token: $(PACKAGECLOUD_API_TOKEN_CENTERDEVICE)
-            #              package_cloud_repo: centerdevice/infrastructure
-            #        steps:
-            #          - task: UseRubyVersion@0
-            #            inputs:
-            #              versionSpec: '>= 2.4'
-            #              addToPath: true
-            #            displayName: "Install Ruby"
-            #          - script: gem install package_cloud
-            #            displayName: 'Install PackageCloud CLI'
-            #          - task: DownloadPipelineArtifact@2
-            #            inputs:
-            #              buildType: 'current'
-            #              artifactName: 'Deb_Pkg'
-            #              targetPath: '$(Build.ArtifactStagingDirectory)' 
-            #            displayName: "Download Debian Package"
-            #          - script: |
-            #              ls -al $BUILD_ARTIFACTSTAGINGDIRECTORY && \
-            #              package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/bionic ${BUILD_ARTIFACTSTAGINGDIRECTORY}/*.deb
-            #            displayName: 'Upload Debian Package to PackageCloud'
-            #            env:
-            #              PACKAGECLOUD_TOKEN: $(package_cloud_token)
-            #              PACKAGECLOUD_REPO: $(package_cloud_repo)
-            #              # Deactivated as long as hubcups does not get a newer official version that includes rustls
-            #              #       - job: 'Publish_To_Crates_Io'
-            #              #         displayName: "Publish to crates.io"
-            #              #         steps:
-            #              #           - template: templates/install_rust.yml
-            #              #             parameters:
-            #              #               rustup_toolchain: stable
-            #              #           - template: templates/install_dependencies.yml
-            #              #           - template: templates/version_information.yml
-            #              #           - script: cargo publish
-            #              #             displayName: "Cargo publish"
-            #              #             env:
-            #              #               CARGO_REGISTRY_TOKEN: $(CARGO_REGISTRY_TOKEN)
-            #              # 
