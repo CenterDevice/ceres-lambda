@@ -141,39 +141,32 @@ stages:
               artifact_names:
                 - aws-watchtower
 
-            #  - stage: Publish_Release
-            #    displayName: "Publish Release"
-            #    dependsOn: Build_Release_Artefacts
-            #    condition: startsWith(variables['build.sourceBranch'], 'refs/tags/')
-            #    jobs:
-            #      - job: 'Publish_To_GitHub'
-            #        displayName: "Publish to GitHub"
-            #        steps:
-            #          # Shortcut 'download' cannot be used as it does not restore into the original path; cf. https://docs.microsoft.com/en-us/azure/devops/pipelines/artifacts/pipeline-artifacts?view=azure-devops&tabs=yaml#downloading-artifacts
-            #          - task: DownloadPipelineArtifact@2
-            #            inputs:
-            #              buildType: 'current'
-            #              artifactName: 'Static_Linux_Binary'
-            #              targetPath: '$(Build.ArtifactStagingDirectory)' 
-            #            displayName: "Download Static Linux Binary"
-            #          - script: |
-            #              ls -al $BUILD_ARTIFACTSTAGINGDIRECTORY && \
-            #              mv "$BUILD_ARTIFACTSTAGINGDIRECTORY/${CRATE_BIN_NAME}" "$BUILD_ARTIFACTSTAGINGDIRECTORY/${CRATE_BIN_NAME}-$AGENT_OSARCHITECTURE-musl-static" && \
-            #              ls -al $BUILD_ARTIFACTSTAGINGDIRECTORY
-            #            displayName: "Prepare Assets for Upload"
-            #          - task: GitHubRelease@0
-            #            displayName: "Create GitHub Release"
-            #            inputs:
-            #              gitHubConnection: 'lukaspustina-releaseupload'
-            #              repositoryName: '$(Build.Repository.Name)' 
-            #              action: create
-            #              target: '$(Build.SourceVersion)'
-            #              tagSource: 'auto'
-            #              tagPattern: 'v.*'
-            #              tag: $(tagName)
-            #              assets: $(Build.ArtifactStagingDirectory)/*
-            #              assetUploadMode: 'delete'
-            #              isDraft: false
-            #              isPreRelease: false
-            #              addChangeLog: true
-            #              compareWith: 'lastFullRelease'
+  - stage: Publish_Release
+    displayName: "Publish Release"
+    dependsOn: Build_Release_Artefacts
+    condition: startsWith(variables['build.sourceBranch'], 'refs/tags/')
+    jobs:
+      - job: 'Publish_To_GitHub'
+        displayName: "Publish to GitHub"
+        steps:
+          - template: templates/download_artifacts.yml
+            parameters:
+              artifact_names:
+                - aws-watchtower
+              path: $(Build.ArtifactStagingDirectory)
+          - task: GitHubRelease@0
+            displayName: "Create GitHub Release"
+            inputs:
+              gitHubConnection: 'lukaspustina-releaseupload'
+              repositoryName: '$(Build.Repository.Name)'
+              action: create
+              target: '$(Build.SourceVersion)'
+              tagSource: 'auto'
+              tagPattern: 'v.*'
+              tag: $(tagName)
+              assets: $(Build.ArtifactStagingDirectory)/*
+              assetUploadMode: 'delete'
+              isDraft: false
+              isPreRelease: false
+              addChangeLog: true
+              compareWith: 'lastFullRelease'

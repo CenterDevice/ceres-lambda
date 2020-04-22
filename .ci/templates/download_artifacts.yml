@@ -1,0 +1,21 @@
+---
+
+parameters:
+  artifact_names: []
+  path: $(Build.ArtifactStagingDirectory)
+
+steps:
+  - ${{ each artifact in parameters.artifact_names }}:
+    # Shortcut 'download' cannot be used as it does not restore into the original path; cf. https://docs.microsoft.com/en-us/azure/devops/pipelines/artifacts/pipeline-artifacts?view=azure-devops&tabs=yaml#downloading-artifacts
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        buildType: 'current'
+        artifactName: Static_Linux_Binary-${{ artifact }}
+        targetPath: ${{ parameters.path }}
+      displayName: Download Static Linux Binary ${{ artifact }}
+    - script: |
+        cd ${{ parameters.path }}
+        ls -al
+        mv -v "${{ artifact }}" "$${{ artifact }}-$AGENT_OSARCHITECTURE-musl-static"
+        ls -al
+      displayName: Prepare Assets for Upload ${{ artifact }}
