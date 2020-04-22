@@ -1,0 +1,12 @@
+---
+
+parameters:
+  artifact_names: []
+  path: target/x86_64-unknown-linux-musl/release
+
+steps:
+  - ${{ each artifact in parameters.artifact_names }}:
+    - publish: $(Build.SourcesDirectory)/${{ parameters.path }}/${{ artifact }}
+      artifact: Static_Linux_Binary-${{ artifact }}
+      displayName: Store static Linux binary ${{ artifact }}
+

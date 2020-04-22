@@ -135,11 +135,11 @@ stages:
           - script: |
               cargo build --all --all-features --release
               ls -al target/x86_64-unknown-linux-musl/release/
-              echo "##vso[task.setvariable variable=static_linux_binary]target/x86_64-unknown-linux-musl/release/aws-watchtower"
             displayName: Build MUSL Static Binary
-          - publish: $(Build.SourcesDirectory)/$(static_linux_binary)
-            artifact: Static_Linux_Binary
-            displayName: Store Static Linux Binary
+          - template: templates/store_artifacts.yml
+            parameters:
+              artifact_names:
+                - aws-watchtower
 
             #  - stage: Publish_Release
             #    displayName: "Publish Release"
