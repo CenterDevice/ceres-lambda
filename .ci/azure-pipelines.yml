@@ -21,6 +21,7 @@ schedules:
     branches:
       include:
         - master
+    always: true
 
 stages:
   - stage: Check_Build_Test
