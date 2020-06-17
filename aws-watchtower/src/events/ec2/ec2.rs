@@ -1,5 +1,5 @@
 use crate::{asg_mapping::Mapping, config::FunctionConfig, events::HandleResult, metrics};
-use aws::ec2::ec2::{Ec2StateInfo, Ec2State};
+use aws::ec2::ec2::{Ec2State, Ec2StateInfo};
 use bosun::{Bosun, Datum, Silence, Tags};
 use failure::Error;
 use lambda_runtime::Context;
@@ -24,24 +24,23 @@ use serde_derive::Deserialize;
 // }
 #[derive(Debug, Deserialize)]
 pub struct Ec2StateChangeEvent {
-    pub id: String,
-    /* These fields do not exist, because serde used both of them to "route" the deserialization to this point.
-    #[serde(rename = "detail-type")]
-    pub detail_type: String,
-    pub source: String,
-    */
-    pub account:     String,
-    pub time:        String,
-    pub region:      String,
-    pub resources:   Vec<String>,
-    pub detail:      Ec2StateChangeDetail,
+    pub id:        String,
+    // These fields do not exist, because serde used both of them to "route" the deserialization to this point.
+    // #[serde(rename = "detail-type")]
+    // pub detail_type: String,
+    // pub source: String,
+    pub account:   String,
+    pub time:      String,
+    pub region:    String,
+    pub resources: Vec<String>,
+    pub detail:    Ec2StateChangeDetail,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Ec2StateChangeDetail {
     #[serde(rename = "instance-id")]
-    pub instance_id:         String,
-    pub state: Ec2State,
+    pub instance_id: String,
+    pub state:       Ec2State,
 }
 
 pub fn handle<T: Bosun>(
@@ -54,7 +53,12 @@ pub fn handle<T: Bosun>(
 
     // Get ASG for this instance if any
     let asg = aws::ec2::asg::get_asg_by_instance_id(state_change.detail.instance_id.clone())?;
-    info!("Mapped instance id to ASG '{:?}'.", asg.as_ref().map(|x| x.auto_scaling_group_name.as_str()).unwrap_or("unmapped"));
+    info!(
+        "Mapped instance id to ASG '{:?}'.",
+        asg.as_ref()
+            .map(|x| x.auto_scaling_group_name.as_str())
+            .unwrap_or("unmapped")
+    );
 
     let mapping = asg
         .as_ref()
@@ -75,35 +79,41 @@ pub fn handle<T: Bosun>(
     bosun.emit_datum(&datum)?;
 
     // If we haven't found an ASG this instance belongs to, the
-    // the instance cannot have been terminated because of an 
-    // auto-scaling lifecycle event. Therefore we're not going to set a silence to 
+    // the instance cannot have been terminated because of an
+    // auto-scaling lifecycle event. Therefore we're not going to set a silence to
     // prevent silencing a infrastructure problem.
     match mapping {
         Some(ref mapping) if state_change.detail.state == Ec2State::ShuttingDown => {
-            set_bosun_silence(&state_change.detail.instance_id, &config.ec2.scaledown_silence_duration, mapping, bosun)?;
+            set_bosun_silence(
+                &state_change.detail.instance_id,
+                &config.ec2.scaledown_silence_duration,
+                mapping,
+                bosun,
+            )?;
         }
         Some(_) => {
-            debug!("Non-shutting-down state change for instance id ({}), no silence necessary", &state_change.detail.instance_id);
+            debug!(
+                "Non-shutting-down state change for instance id ({}), no silence necessary",
+                &state_change.detail.instance_id
+            );
         }
         None => {
-            info!("No ASG found for instance id ({}), refusing to set a silence", &state_change.detail.instance_id);
+            info!(
+                "No ASG found for instance id ({}), refusing to set a silence",
+                &state_change.detail.instance_id
+            );
         }
     }
 
     let ec2_state_info = Ec2StateInfo {
         ec2_instance_id: state_change.detail.instance_id,
-        state: state_change.detail.state,
+        state:           state_change.detail.state,
     };
 
-    Ok(HandleResult::Ec2StateInfo{ec2_state_info})
+    Ok(HandleResult::Ec2StateInfo { ec2_state_info })
 }
 
-fn set_bosun_silence(
-    instance_id: &str,
-    duration: &str,
-    mapping: &Mapping,
-    bosun: &dyn Bosun,
-) -> Result<(), Error> {
+fn set_bosun_silence(instance_id: &str, duration: &str, mapping: &Mapping, bosun: &dyn Bosun) -> Result<(), Error> {
     let host = format!("{}{}*", &mapping.host_prefix, instance_id);
     info!("Setting silence of {} for host '{}'.", duration, host);
 
@@ -123,8 +133,8 @@ mod tests {
 
     fn setup() { testing::setup(); }
 
-     #[test]
-     fn parse_pending_ec2_state_change_event_from_json() {
+    #[test]
+    fn parse_pending_ec2_state_change_event_from_json() {
         setup();
 
         let json = json!(
@@ -152,7 +162,7 @@ mod tests {
         assert_that(&event).is_ok();
     }
 
-     #[test]
+    #[test]
     fn parse_shutting_down_ec2_state_change_event_from_json() {
         setup();
 
@@ -179,5 +189,5 @@ mod tests {
         info!("event = {:?}", event);
 
         assert_that(&event).is_ok();
-     }
+    }
 }

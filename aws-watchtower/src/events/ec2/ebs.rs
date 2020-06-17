@@ -29,18 +29,17 @@ use std::fmt;
 // }
 #[derive(Debug, Deserialize)]
 pub struct VolumeEvent {
-    pub version:     String,
-    pub id:          String,
-    /* These fields do not exist, because serde used both of them to "route" the deserialization to this point.
-    #[serde(rename = "detail-type")]
-    pub detail_type: String,
-    pub source: String,
-    */
-    pub account:     String,
-    pub time:        String,
-    pub region:      String,
-    pub resources:   Vec<String>,
-    pub detail:      VolumeEventDetail,
+    pub version:   String,
+    pub id:        String,
+    // These fields do not exist, because serde used both of them to "route" the deserialization to this point.
+    // #[serde(rename = "detail-type")]
+    // pub detail_type: String,
+    // pub source: String,
+    pub account:   String,
+    pub time:      String,
+    pub region:    String,
+    pub resources: Vec<String>,
+    pub detail:    VolumeEventDetail,
 }
 
 #[derive(Debug, Deserialize)]

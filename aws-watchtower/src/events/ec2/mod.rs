@@ -39,7 +39,8 @@ mod test {
     use testing::setup;
 
     #[test]
-    /// The purpose of this test is to show if an event received at the `Event` level can be parsed down to an `ec2::ebs::EbsVolumeEvent`.
+    /// The purpose of this test is to show if an event received at the `Event` level can be parsed
+    /// down to an `ec2::ebs::EbsVolumeEvent`.
     fn test_parse_ebs_volume_event() {
         setup();
 
@@ -64,13 +65,14 @@ mod test {
         let event: Ec2Event = serde_json::from_str(&json).unwrap();
 
         match event {
-            Ec2Event::VolumeEvent(_) => {},
+            Ec2Event::VolumeEvent(_) => {}
             _ => panic!("Parsed wrong event"),
         }
     }
 
     #[test]
-    /// The purpose of this test is to show if an event received at the `Event` level can be parsed down to an `ec2::ec2::Ec2StateChangeEvent`.
+    /// The purpose of this test is to show if an event received at the `Event` level can be parsed
+    /// down to an `ec2::ec2::Ec2StateChangeEvent`.
     fn test_parse_ec2_state_change_event() {
         setup();
 
@@ -89,11 +91,11 @@ mod test {
                 "state":"pending"
             }
          }"#;
-         let event: Ec2Event = serde_json::from_str(&json).unwrap();
+        let event: Ec2Event = serde_json::from_str(&json).unwrap();
 
-         match event {
-             Ec2Event::Ec2StateChangeEvent(_) => {},
-             _ => panic!("Parsed wrong event"),
-         }
+        match event {
+            Ec2Event::Ec2StateChangeEvent(_) => {}
+            _ => panic!("Parsed wrong event"),
+        }
     }
 }

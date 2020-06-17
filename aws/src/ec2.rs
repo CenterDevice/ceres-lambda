@@ -2,8 +2,8 @@ pub mod asg {
     use crate::{auth, AwsError};
     use failure::Error;
     use log::debug;
-    use rusoto_core::{HttpClient, Region};
     use rusoto_autoscaling::{Autoscaling, AutoscalingClient, DescribeAutoScalingInstancesType};
+    use rusoto_core::{HttpClient, Region};
     use serde_derive::Serialize;
 
     #[derive(Debug, Serialize)]
@@ -45,10 +45,10 @@ pub mod asg {
 
         let asg_info = first_asg.map(|details| {
             AsgInfo {
-                ec2_instance_id: instance_id,
+                ec2_instance_id:         instance_id,
                 auto_scaling_group_name: details.auto_scaling_group_name,
             }
-        } );
+        });
         debug!("Parsed autoscaling information: '{:?}'", asg_info);
 
         Ok(asg_info)
@@ -179,17 +179,17 @@ pub mod ec2 {
     #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, Copy)]
     #[serde(rename_all = "kebab-case")]
     pub enum Ec2State {
-        Pending = 1,
-        Running = 2,
+        Pending      = 1,
+        Running      = 2,
         ShuttingDown = 3,
-        Stopped = 4,
-        Stopping = 5,
-        Terminated = 6,
+        Stopped      = 4,
+        Stopping     = 5,
+        Terminated   = 6,
     }
 
     #[derive(Debug, Serialize)]
     pub struct Ec2StateInfo {
         pub ec2_instance_id: String,
-        pub state: Ec2State,
+        pub state:           Ec2State,
     }
 }
