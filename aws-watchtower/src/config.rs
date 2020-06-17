@@ -143,6 +143,9 @@ host_prefix = 'webserver-'
 search = 'import'
 tag_name = 'import'
 host_prefix = 'import-'
+
+[ec2]
+scaledown_silence_duration = "15m"
 "#;
         let mut expected = FunctionConfig::default();
         expected.bosun.tags.insert("tag1".to_string(), "value1".to_string());
