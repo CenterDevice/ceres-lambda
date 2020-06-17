@@ -74,16 +74,16 @@ pub fn handle<T: Bosun>(
     let datum = Datum::now(metrics::EC2_STATE_CHANGE, &value, &tags);
     bosun.emit_datum(&datum)?;
 
-    // We haven't found an ASG, so this instance does not belong to an ASG.
-    // In this case, the instance cannot have been terminated because of an 
-    // auto-scaling lifecycle event. There we not going to set a silence to 
+    // If we haven't found an ASG this instance belongs to, the
+    // the instance cannot have been terminated because of an 
+    // auto-scaling lifecycle event. Therefore we're not going to set a silence to 
     // prevent silencing a infrastructure problem.
     match mapping {
         Some(ref mapping) if state_change.detail.state == Ec2State::ShuttingDown => {
-            set_bosun_silence(&state_change.detail.instance_id, &config.asg.scaledown_silence_duration, mapping, bosun)?;
+            set_bosun_silence(&state_change.detail.instance_id, &config.ec2.scaledown_silence_duration, mapping, bosun)?;
         }
         Some(_) => {
-            debug!("Non shut-down state change for instance id ({}), no silence necessary", &state_change.detail.instance_id);
+            debug!("Non-shutting-down state change for instance id ({}), no silence necessary", &state_change.detail.instance_id);
         }
         None => {
             info!("No ASG found for instance id ({}), refusing to set a silence", &state_change.detail.instance_id);

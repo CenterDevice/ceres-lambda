@@ -11,6 +11,7 @@ use std::collections::HashMap;
 pub struct EncryptedFunctionConfig {
     pub bosun: Bosun,
     pub asg:   Asg,
+    pub ec2:   Ec2,
 }
 
 impl EncryptedFunctionConfig {
@@ -22,7 +23,7 @@ impl EncryptedFunctionConfig {
             ..self.bosun
         };
 
-        let config = FunctionConfig { bosun, asg: self.asg };
+        let config = FunctionConfig { bosun, asg: self.asg, ec2: self.ec2 };
 
         Ok(config)
     }
@@ -48,9 +49,16 @@ pub struct Asg {
 }
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
+pub struct Ec2 {
+    pub scaledown_silence_duration: String,
+}
+
+
+#[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct FunctionConfig {
     pub bosun: Bosun,
     pub asg:   Asg,
+    pub ec2:   Ec2,
 }
 
 impl Default for FunctionConfig {
@@ -68,7 +76,11 @@ impl Default for FunctionConfig {
             mappings:                   Mappings { items: Vec::new() },
         };
 
-        FunctionConfig { bosun, asg }
+        let ec2 = Ec2 {
+            scaledown_silence_duration: "15m".to_string(),
+        };
+
+        FunctionConfig { bosun, asg, ec2 }
     }
 }
 
