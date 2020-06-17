@@ -8,7 +8,7 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json::{self, Value};
 
 pub mod asg;
-pub mod ebs;
+pub mod ec2;
 pub mod ping;
 
 #[derive(Debug, Deserialize)]
@@ -18,7 +18,7 @@ pub enum Event {
     #[serde(rename = "aws.autoscaling")]
     Asg(asg::AutoScalingEvent),
     #[serde(rename = "aws.ec2")]
-    Ebs(ebs::VolumeEvent),
+    Ec2(ec2::Ec2Event),
     #[serde(rename = "ping")]
     Ping(ping::Ping),
 }
@@ -73,7 +73,7 @@ fn handle_event<T: Bosun>(
 ) -> Result<HandleResult, Error> {
     match event {
         Event::Asg(asg) => asg::handle(asg, ctx, config, bosun),
-        Event::Ebs(ebs) => ebs::handle(ebs, ctx, config, bosun),
+        Event::Ec2(ec2) => ec2::handle(ec2, ctx, config, bosun),
         Event::Ping(ping) => ping::handle(ping, ctx, config, bosun),
     }
 }
@@ -88,6 +88,32 @@ mod tests {
     use serde_json::json;
     use spectral::prelude::*;
     use testing::setup;
+
+    #[test]
+    /// The purpose of this test is to show if an event received at the `Event` level can be parsed down to an `events::ec2::ebs::EbsVolumeEvent`.
+    fn test_parse_ebs_volume_event() {
+        setup();
+
+        let json = r#"{
+            "version": "0",
+            "id": "01234567-0123-0123-0123-012345678901",
+            "detail-type": "EBS Volume Notification",
+            "source": "aws.ec2",
+            "account": "012345678901",
+            "time": "yyyy-mm-ddThh:mm:ssZ",
+            "region": "us-east-1",
+            "resources": [
+               "arn:aws:ec2:us-east-1:012345678901:volume/vol-01234567"
+            ],
+            "detail": {
+               "result": "available",
+               "cause": "",
+               "event": "createVolume",
+               "request-id": "01234567-0123-0123-0123-0123456789ab"
+            }
+         }"#;
+        let _: ec2::ebs::VolumeEvent = serde_json::from_str(&json).unwrap();
+    }
 
     #[test]
     fn test_parsing_error() {
