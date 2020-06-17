@@ -1,5 +1,5 @@
 use crate::{config::FunctionConfig, error::AwsWatchtowerError, metrics};
-use aws::ec2::{asg::AsgScalingInfo, ebs::VolumeInfo};
+use aws::ec2::{asg::AsgScalingInfo, ebs::VolumeInfo, ec2::Ec2StateInfo};
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
 use lambda_runtime::Context;
@@ -32,6 +32,8 @@ pub enum HandleResult {
     Ping { echo_reply: String },
     #[serde(rename = "ec2.asg.auto_scaling_info")]
     AsgScalingInfo { auto_scaling_info: AsgScalingInfo },
+    #[serde(rename = "ec2.ec2.state_info")]
+    Ec2StateInfo { ec2_state_info: Ec2StateInfo },
     #[serde(rename = "ec2.ebs.volume_info")]
     VolumeInfo { volume_info: VolumeInfo },
 }

@@ -1,9 +1,10 @@
-use crate::{asg_mapping::Mapping, config::FunctionConfig, error::AwsWatchtowerError, events::HandleResult, metrics};
+use crate::{asg_mapping::Mapping, config::FunctionConfig, events::HandleResult, metrics};
+use aws::ec2::ec2::{Ec2StateInfo, Ec2State};
 use bosun::{Bosun, Datum, Silence, Tags};
 use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
 
 // cf. https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/EventTypes.html#ec2_event_type
 // {
@@ -40,77 +41,26 @@ pub struct Ec2StateChangeEvent {
 pub struct Ec2StateChangeDetail {
     #[serde(rename = "instance-id")]
     pub instance_id:         String,
-    pub state: Ec2StateChangeState,
-}
-
-#[derive(PartialEq, Eq, Debug, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Ec2StateChangeState {
-    Pending,
-    Running,
-    ShuttingDown,
-    Stopped,
-    Stopping,
-    Terminated,
-}
-
-/*
-impl<'a> Ec2StateChangeEvent<'a> {
-    pub fn try_from(asg: &'a AutoScalingEvent) -> Result<AsgLifeCycleEvent<'a>, Error> {
-        match asg.detail_type.as_str() {
-            "EC2 Instance Launch Successful" => {
-                let details = AsgLifeCycleEvent::lifecycle_details_from(asg)?;
-                Ok(AsgLifeCycleEvent::SuccessfulLaunch(details))
-            }
-            "EC2 Instance Launch Unsuccessful" => {
-                let details = AsgLifeCycleEvent::lifecycle_details_from(asg)?;
-                Ok(AsgLifeCycleEvent::UnsuccessfulLaunch(details))
-            }
-            "EC2 Instance Terminate Successful" => AsgLifeCycleEvent::successful_termination_from(asg),
-            "EC2 Instance Terminate Unsuccessful" => {
-                let details = AsgLifeCycleEvent::lifecycle_details_from(asg)?;
-                Ok(AsgLifeCycleEvent::UnsuccessfulTermination(details))
-            }
-            _ => Err(Error::from(AwsWatchtowerError::FailedParseAsgEvent)),
-        }
-    }
-
-    fn lifecycle_details_from(asg: &'a AutoScalingEvent) -> Result<LifeCycleDetails<'a>, Error> {
-        let details = LifeCycleDetails {
-            auto_scaling_group_name: &asg.detail.auto_scaling_group_name,
-        };
-
-        Ok(details)
-    }
-
-    fn successful_termination_from(asg: &'a AutoScalingEvent) -> Result<AsgLifeCycleEvent<'a>, Error> {
-        let details = TerminationDetails {
-            instance_id:             &asg.detail.ec2_instance_id,
-            auto_scaling_group_name: &asg.detail.auto_scaling_group_name,
-        };
-
-        Ok(AsgLifeCycleEvent::SuccessfulTermination(details))
-    }
+    pub state: Ec2State,
 }
 
 pub fn handle<T: Bosun>(
-    asg: AutoScalingEvent,
+    state_change: Ec2StateChangeEvent,
     _: &Context,
     config: &FunctionConfig,
     bosun: &T,
 ) -> Result<HandleResult, Error> {
-    debug!("Received AutoScalingEvent {:?}.", asg);
-    let event = AsgLifeCycleEvent::try_from(&asg)?;
-    info!("Received AsgLifeCycleEvent {:?}.", event);
+    info!("Received Ec2StateChangeEvent {:?}.", state_change);
 
-    let (asg_name, value) = match event {
-        AsgLifeCycleEvent::SuccessfulLaunch(ref x) => (x.auto_scaling_group_name, 1),
-        AsgLifeCycleEvent::UnsuccessfulLaunch(ref x) => (x.auto_scaling_group_name, 0),
-        AsgLifeCycleEvent::SuccessfulTermination(ref x) => (x.auto_scaling_group_name, -1),
-        AsgLifeCycleEvent::UnsuccessfulTermination(ref x) => (x.auto_scaling_group_name, 0),
-    };
+    // Get ASG for this instance if any
+    let asg = aws::ec2::asg::get_asg_by_instance_id(state_change.detail.instance_id.clone())?;
+    info!("Mapped instance id to ASG '{:?}'.", asg.as_ref().map(|x| x.auto_scaling_group_name.as_str()).unwrap_or("unmapped"));
 
-    let mapping = config.asg.mappings.map(asg_name);
+    let mapping = asg
+        .as_ref()
+        .map(|x| x.auto_scaling_group_name.as_str())
+        .map(|auto_scaling_group_name| config.asg.mappings.map(auto_scaling_group_name))
+        .flatten();
     info!("Mapped ASG to '{:?}'.", mapping);
 
     let mut tags = Tags::new();
@@ -120,36 +70,41 @@ pub fn handle<T: Bosun>(
             .map(|x| x.tag_name.to_string())
             .unwrap_or_else(|| "unmapped".to_string()),
     );
-    let value = value.to_string();
-    let datum = Datum::now(metrics::ASG_UP_DOWN, &value, &tags);
+    let value = (state_change.detail.state as u32).to_string();
+    let datum = Datum::now(metrics::EC2_STATE_CHANGE, &value, &tags);
     bosun.emit_datum(&datum)?;
 
-    if let AsgLifeCycleEvent::SuccessfulTermination(ref details) = event {
-        set_bosun_silence(details, &config.asg.scaledown_silence_duration, mapping, bosun)?
+    // We haven't found an ASG, so this instance does not belong to an ASG.
+    // In this case, the instance cannot have been terminated because of an 
+    // auto-scaling lifecycle event. There we not going to set a silence to 
+    // prevent silencing a infrastructure problem.
+    match mapping {
+        Some(ref mapping) if state_change.detail.state == Ec2State::ShuttingDown => {
+            set_bosun_silence(&state_change.detail.instance_id, &config.asg.scaledown_silence_duration, mapping, bosun)?;
+        }
+        Some(_) => {
+            debug!("Non shut-down state change for instance id ({}), no silence necessary", &state_change.detail.instance_id);
+        }
+        None => {
+            info!("No ASG found for instance id ({}), refusing to set a silence", &state_change.detail.instance_id);
+        }
+    }
+
+    let ec2_state_info = Ec2StateInfo {
+        ec2_instance_id: state_change.detail.instance_id,
+        state: state_change.detail.state,
     };
 
-    let auto_scaling_info = AsgScalingInfo {
-        ec2_instance_id:         asg.detail.ec2_instance_id,
-        auto_scaling_group_name: asg.detail.auto_scaling_group_name,
-        auto_scaling_event:      asg.detail_type,
-    };
-
-    Ok(HandleResult::AsgScalingInfo { auto_scaling_info })
+    Ok(HandleResult::Ec2StateInfo{ec2_state_info})
 }
 
 fn set_bosun_silence(
-    details: &TerminationDetails,
+    instance_id: &str,
     duration: &str,
-    mapping: Option<&Mapping>,
+    mapping: &Mapping,
     bosun: &dyn Bosun,
 ) -> Result<(), Error> {
-    let host_prefix = mapping.map(|x| &x.host_prefix).ok_or_else(|| {
-        Error::from(AwsWatchtowerError::NoHostMappingFound(
-            details.auto_scaling_group_name.to_string(),
-        ))
-    })?;
-
-    let host = format!("{}{}*", &host_prefix, details.instance_id);
+    let host = format!("{}{}*", &mapping.host_prefix, instance_id);
     info!("Setting silence of {} for host '{}'.", duration, host);
 
     let silence = Silence::host(&host, duration);
@@ -157,7 +112,6 @@ fn set_bosun_silence(
 
     Ok(())
 }
-*/
 
 #[cfg(test)]
 mod tests {

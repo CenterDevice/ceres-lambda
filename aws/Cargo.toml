@@ -17,6 +17,7 @@ log = "0.4"
 rusoto_core = "0.36"
 rusoto_kms = "0.36"
 rusoto_ec2 = "0.36"
+rusoto_autoscaling = "0.36"
 serde = "1"
 serde_derive = "1"
 

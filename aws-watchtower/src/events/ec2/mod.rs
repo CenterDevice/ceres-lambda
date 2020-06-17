@@ -26,7 +26,7 @@ pub fn handle<T: Bosun>(
     bosun: &T,
 ) -> Result<HandleResult, Error> {
     match event {
-        Ec2Event::Ec2StateChangeEvent(event) => unimplemented!(),
+        Ec2Event::Ec2StateChangeEvent(event) => ec2::handle(event, ctx, config, bosun),
         Ec2Event::VolumeEvent(event) => ebs::handle(event, ctx, config, bosun),
     }
 }
