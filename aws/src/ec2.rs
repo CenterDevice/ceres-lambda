@@ -182,8 +182,8 @@ pub mod ec2 {
         Pending      = 1,
         Running      = 2,
         ShuttingDown = 3,
-        Stopped      = 4,
-        Stopping     = 5,
+        Stopping     = 4,
+        Stopped      = 5,
         Terminated   = 6,
     }
 

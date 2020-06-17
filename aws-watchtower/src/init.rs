@@ -68,6 +68,14 @@ pub fn bosun_metrics<T: Bosun>(bosun: &T) -> Result<(), Error> {
     bosun.emit_metadata(&metadata)?;
 
     let metadata = Metadata::new(
+        metrics::EC2_STATE_CHANGE,
+        "gauge",
+        "State",
+        "Instance State Change Event [1 = pending, 2 = running, 3 = shutting-down, 4 = stopping, 5 = stopped, 6 = terminated]",
+    );
+    bosun.emit_metadata(&metadata)?;
+
+    let metadata = Metadata::new(
         metrics::LAMBDA_INVOCATION_COUNT,
         "rate",
         "Invocations",
