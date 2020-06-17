@@ -180,49 +180,4 @@ mod tests {
 
         assert_that(&event).is_ok();
      }
-
-/*
-    fn asg_success_full_termination_event() -> AutoScalingEvent {
-        AutoScalingEvent {
-            version:     "0".to_string(),
-            id:          "12345678-1234-1234-1234-123456789012".to_string(),
-            detail_type: "EC2 Instance Terminate Successful".to_string(),
-            account:     "123456789012".to_string(),
-            time:        Utc::now().to_string(),
-            region:      "us-west-2".to_string(),
-            resources:   vec!["auto-scaling-group-arn".to_string(), "instance-arn".to_string()],
-            detail:      AutoScalingEventDetail {
-                request_id:              "12345678-1234-1234-1234-123456789012".to_string(),
-                ec2_instance_id:         "i-1234567890abcdef0".to_string(),
-                auto_scaling_group_name: "my-auto-scaling-group".to_string(),
-            },
-        }
-    }
-
-    #[test]
-    fn parse_asg_lifecycle_event_from_asg_success_full_termination() {
-        setup();
-
-        let asg = asg_success_full_termination_event();
-        let instance_id = "i-1234567890abcdef0".to_string();
-        let auto_scaling_group_name = "my-auto-scaling-group".to_string();
-        let expected_details = TerminationDetails {
-            instance_id:             instance_id.as_str(),
-            auto_scaling_group_name: auto_scaling_group_name.as_str(),
-        };
-
-        let asg_event = AsgLifeCycleEvent::try_from(&asg);
-
-        asserting("failed to parse asg event").that(&asg_event).is_ok();
-        match asg_event.unwrap() {
-            AsgLifeCycleEvent::SuccessfulTermination(ref details) => {
-                assert_that(&details)
-                    .named("termination details")
-                    .is_equal_to(&expected_details)
-            }
-            _ => panic!("wrong event"),
-        };
-    }
-
-    */
 }

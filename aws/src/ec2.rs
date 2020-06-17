@@ -172,6 +172,7 @@ pub mod ebs {
     }
 }
 
+#[allow(clippy::module_inception)]
 pub mod ec2 {
     use serde_derive::{Deserialize, Serialize};
 

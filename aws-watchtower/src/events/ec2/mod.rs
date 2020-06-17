@@ -5,6 +5,7 @@ use lambda_runtime::Context;
 use serde_derive::Deserialize;
 
 pub mod ebs;
+#[allow(clippy::module_inception)]
 pub mod ec2;
 
 pub use ebs::VolumeEvent;
@@ -64,7 +65,7 @@ mod test {
 
         match event {
             Ec2Event::VolumeEvent(_) => {},
-            _ => assert!(false, "Parsed wrong event"),
+            _ => panic!("Parsed wrong event"),
         }
     }
 
@@ -92,7 +93,7 @@ mod test {
 
          match event {
              Ec2Event::Ec2StateChangeEvent(_) => {},
-             _ => assert!(false, "Parsed wrong event"),
+             _ => panic!("Parsed wrong event"),
          }
     }
 }
