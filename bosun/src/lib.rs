@@ -3,7 +3,6 @@ use failure::Fail;
 use log::{debug, info};
 use reqwest::StatusCode;
 use serde_derive::Serialize;
-use serde_json;
 use std::{collections::HashMap, time::Duration};
 
 /// Result of an attempt to send meta data or a metric datum

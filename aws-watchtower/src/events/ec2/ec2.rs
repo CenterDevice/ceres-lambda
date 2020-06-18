@@ -129,7 +129,6 @@ mod tests {
 
     use serde_json::json;
     use spectral::prelude::*;
-    use testing;
 
     fn setup() { testing::setup(); }
 

@@ -1,9 +1,7 @@
 use crate::{config::FunctionConfig, error::AwsWatchtowerError, lambda::LambdaResult};
 use failure::Error;
 use lambda_runtime::{error::HandlerError, Context};
-use lazy_static;
 use log::info;
-use serde;
 use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

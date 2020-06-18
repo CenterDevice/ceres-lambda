@@ -145,7 +145,6 @@ pub mod ebs {
         use super::*;
 
         use spectral::prelude::*;
-        use testing;
 
         #[test]
         fn test_id_from_arn() {

@@ -34,7 +34,6 @@ mod test {
     use super::*;
 
     use spectral::prelude::*;
-    use toml;
 
     #[test]
     fn test_load_mappings() {

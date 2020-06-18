@@ -1,5 +1,4 @@
 use bosun::{Bosun, BosunClient, Metadata};
-use env_logger;
 
 use std::env;
 

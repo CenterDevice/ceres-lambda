@@ -113,7 +113,6 @@ mod tests {
     use crate::asg_mapping::Mapping;
 
     use spectral::prelude::*;
-    use toml;
 
     #[test]
     fn deserialize_function_config() {

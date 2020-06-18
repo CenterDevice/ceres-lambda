@@ -158,7 +158,6 @@ mod tests {
 
     use chrono::offset::Utc;
     use spectral::prelude::*;
-    use testing;
 
     fn setup() { testing::setup(); }
 

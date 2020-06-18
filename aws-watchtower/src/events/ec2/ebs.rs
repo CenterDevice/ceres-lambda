@@ -159,7 +159,6 @@ mod tests {
     use aws::ec2::ebs::VolumeInfo;
 
     use spectral::prelude::*;
-    use testing;
 
     #[test]
     fn test_deserialize_create_volume_event_result_is_available() {
