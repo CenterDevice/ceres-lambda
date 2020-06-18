@@ -4,8 +4,6 @@ Ceres the goddess of agriculture, grain crops, fertility and motherly relationsh
 
 image:https://dev.azure.com/centerdevice/ceres-lambda/_apis/build/status/CenterDevice.ceres-lambda?branchName=master[link="https://dev.azure.com/centerdevice/ceres-lambda/_build?definitionId=17"] image:https://img.shields.io/github/release/centerdevice/ceres-lambda.svg[link="https://github.com/centerdevice/ceres-lambda/releases"] image:https://img.shields.io/badge/license-MIT-blue.svg?label=License[link="./LICENSE]
 
-[![Build Status](https://dev.azure.com/centerdevice/ceres-lambda/_apis/build/status/CenterDevice.ceres-lambda?branchName=master)](https://dev.azure.com/centerdevice/ceres-lambda/_build/latest?definitionId=17&branchName=master)
-
 == Functions
 
 * `aws-watchtower` -- Reacts on AWS Cloudwatch Events like AWS EC2 Autoscaling Group life cycle events and in case of instance terminations sets corresponding silences in Bosun to avoid unknown alerts.
