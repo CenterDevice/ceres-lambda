@@ -1,6 +1,6 @@
 [package]
 name = "aws-watchtower"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
 build = "build.rs"
 
@@ -19,10 +19,10 @@ name = "aws_watchtower"
 path = "src/lib.rs"
 
 [dependencies]
-aws = { version = "0.0.1", path = "../aws" }
+aws = { version = "0.0.2", path = "../aws" }
 clams = "0.0.13"
 clams-derive = "^0.0.4"
-bosun = { version = "0.0.1", path = "../bosun" }
+bosun = { version = "0.0.2", path = "../bosun" }
 env_logger = "0.6"
 failure = "0.1"
 failure_derive = "0.1"
