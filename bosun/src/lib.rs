@@ -1,7 +1,7 @@
 use chrono::Timelike;
 use failure::Fail;
 use log::{debug, info};
-use reqwest::{StatusCode, Url};
+use reqwest::StatusCode;
 use serde_derive::Serialize;
 use serde_json;
 use std::{collections::HashMap, time::Duration};
@@ -34,24 +34,21 @@ pub struct BosunClient {
     /// Timeout for http request connection
     pub timeout:      u64,
     pub default_tags: Tags,
+    pub username:   Option<String>,
+    pub password:   Option<String>
 }
 
 pub trait Bosun {
     fn emit_metadata(&self, metadata: &Metadata) -> BosunResult;
     fn emit_datum(&self, datum: &Datum) -> BosunResult;
     fn set_silence(&self, silence: &Silence) -> BosunResult;
+    fn send_to_bosun_api(&self, path: &str, json: &str, expected: StatusCode) -> BosunResult;
 }
 
 impl Bosun for BosunClient {
     fn emit_metadata(&self, metadata: &Metadata) -> BosunResult {
         let encoded = metadata.to_json()?;
-        let res = BosunClient::send_to_bosun_api(
-            &self.host,
-            "/api/metadata/put",
-            &encoded,
-            self.timeout,
-            StatusCode::NO_CONTENT,
-        );
+        let res = self.send_to_bosun_api("/api/metadata/put", &encoded, StatusCode::NO_CONTENT);
         info!(
             "Sent medata '{:?}' to '{:?}' with result: '{:?}'.",
             encoded, self.host, res
@@ -66,7 +63,7 @@ impl Bosun for BosunClient {
 
         let encoded = internal_datum.to_json()?;
         let res =
-            BosunClient::send_to_bosun_api(&self.host, "/api/put", &encoded, self.timeout, StatusCode::NO_CONTENT);
+            self.send_to_bosun_api("/api/put", &encoded, StatusCode::NO_CONTENT);
         info!(
             "Sent datum '{:?}' to '{:?}' with result: '{:?}'.",
             encoded, &self.host, res
@@ -79,7 +76,7 @@ impl Bosun for BosunClient {
         let json = serde_json::to_string(silence)
             //TODO: Use context to carry original error on
             .map_err(|_| BosunError::JsonParseError)?;
-        let res = BosunClient::send_to_bosun_api(&self.host, "/api/silence/set", &json, self.timeout, StatusCode::OK);
+        let res = self.send_to_bosun_api("/api/silence/set", &json, StatusCode::OK);
         info!(
             "Set silence '{:?}' at '{:?}' with result: '{:?}'.",
             json, &self.host, res
@@ -87,37 +84,16 @@ impl Bosun for BosunClient {
 
         res
     }
-}
-impl BosunClient {
-    /// Creates a new BosunClient.
-    pub fn new(host: &str, timeout: u64) -> BosunClient { Self::with_tags(host, timeout, Tags::new()) }
 
-    /// Creates a new BosunClient with default tags
-    pub fn with_tags(host: &str, timeout: u64, default_tags: Tags) -> BosunClient {
-        BosunClient {
-            host: host.to_string(),
-            timeout,
-            default_tags,
-        }
-    }
-
-    fn send_to_bosun_api<T: Into<Option<u64>>>(
-        host: &str,
-        path: &str,
-        json: &str,
-        timeout: T,
-        expected: StatusCode,
-    ) -> BosunResult {
-        let uri = if host.starts_with("http") {
-            format!("{}{}", host, path)
+    fn send_to_bosun_api(&self, path: &str, json: &str, expected: StatusCode) -> BosunResult {
+        let uri = if self.host.starts_with("http") {
+            format!("{}{}", self.host, path)
         } else {
-            format!("http://{}{}", host, path)
+            format!("http://{}{}", self.host, path)
         };
-        let url = Url::parse(&uri).unwrap();
-        let timeout = timeout.into().unwrap_or(5); // Default timeout is set to 5 sec.
 
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(timeout))
+            .timeout(Duration::from_secs(self.timeout))
             .build()
             .map_err(|e| BosunError::EmitError(format!("failed to build http client because {}", e.to_string())))?;
 
@@ -129,15 +105,9 @@ impl BosunClient {
             .body(body);
 
         // Only add basic auth, if username and password are set
-        let req = if url.has_authority() {
-            let username = url.username();
-            let password = url.password();
-            match (username, password) {
-                (u, Some(_)) if !u.is_empty() => req.basic_auth(username, password),
-                _ => req,
-            }
-        } else {
-            req
+        let req = match (&self.username, &self.password) {
+            (Some(u), p) if !u.is_empty() => req.basic_auth(u, p.clone()),
+            _ => req,
         };
 
         let res = req.send();
@@ -147,6 +117,27 @@ impl BosunClient {
             Ok(response) => Err(BosunError::ReceiveError(format!("{}", response.status()))),
             Err(err) => Err(BosunError::EmitError(format!("{}", err))),
         }
+    }
+}
+
+impl BosunClient {
+    /// Creates a new BosunClient.
+    pub fn new(host: &str, timeout: u64) -> BosunClient { Self::with_tags(host, timeout, Tags::new()) }
+
+    /// Creates a new BosunClient with default tags
+    pub fn with_tags(host: &str, timeout: u64, default_tags: Tags) -> BosunClient {
+        BosunClient {
+            host: host.to_string(),
+            timeout,
+            default_tags,
+            username: None,
+            password: None,
+        }
+    }
+
+    pub fn set_basic_auth(&mut self, username: String, password: Option<String>) {
+        self.username = Some(username);
+        self.password = password;
     }
 }
 
@@ -380,6 +371,11 @@ pub mod testing {
             self.inc("set_silence");
             Ok(())
         }
+
+        fn send_to_bosun_api(&self, _: &str, _: &str, _: StatusCode) -> BosunResult {
+            Ok(())
+        }
+
     }
 
     #[derive(PartialEq, Eq, Debug)]

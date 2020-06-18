@@ -36,7 +36,8 @@ pub fn bosun(config: &FunctionConfig, ctx: &Context) -> Result<impl Bosun, Error
     tags.insert("host".to_string(), "lambda".to_string());
     tags.insert("function_name".to_string(), ctx.function_name.to_string());
 
-    let bosun = BosunClient::with_tags(config.bosun.uri().as_str(), config.bosun.timeout.unwrap_or(3), tags);
+    let mut bosun = BosunClient::with_tags(config.bosun.host.as_str(), config.bosun.timeout.unwrap_or(3), tags);
+    bosun.set_basic_auth(config.bosun.user.clone(), Some(config.bosun.password.clone()));
 
     debug!("Initialized bosun.");
     Ok(bosun)

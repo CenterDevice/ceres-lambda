@@ -19,8 +19,8 @@ fn main() {
         .to_string_lossy()
         .to_string();
 
-    let bosun_host = format!("https://{}:{}@{}", &bosun_username, &bosun_password, &bosun_url);
-    let bosun = BosunClient::new(&bosun_host, 5);
+    let mut bosun = BosunClient::new(&bosun_url, 5);
+    bosun.set_basic_auth(bosun_username, Some(bosun_password));
 
     let metadata = Metadata::new(
         "aws.ec2.asg.scaling.event",

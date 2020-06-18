@@ -42,10 +42,6 @@ pub struct Bosun {
     pub tags:     HashMap<String, String>,
 }
 
-impl Bosun {
-    pub fn uri(&self) -> String { format!("https://{}:{}@{}", &self.user, &self.password, &self.host) }
-}
-
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct Asg {
     pub scaledown_silence_duration: String,
