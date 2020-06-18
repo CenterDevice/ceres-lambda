@@ -2,7 +2,9 @@
 
 Ceres the goddess of agriculture, grain crops, fertility and motherly relationships sometimes used to use AWS Lambda Functions to get ops stuff done.
 
-image:https://dev.azure.com/centerdevice/ceres-lambda/_apis/build/status/CenterDevice.ceres-lambda?branchName=master[link="https://dev.azure.com/centerdevice/ceres-lambda/_build/latest?definitionId=17&branchName=master"] image:https://img.shields.io/github/release/centerdevice/ceres-lambda.svg[link="https://github.com/centerdevice/ceres-lambda/releases"] image:https://img.shields.io/badge/license-MIT-blue.svg?label=License[link="./LICENSE]
+image:https://dev.azure.com/centerdevice/ceres-lambda/_apis/build/status/CenterDevice.ceres-lambda?branchName=master[link="https://dev.azure.com/centerdevice/ceres-lambda/_build?definitionId=17"] image:https://img.shields.io/github/release/centerdevice/ceres-lambda.svg[link="https://github.com/centerdevice/ceres-lambda/releases"] image:https://img.shields.io/badge/license-MIT-blue.svg?label=License[link="./LICENSE]
+
+[![Build Status](https://dev.azure.com/centerdevice/ceres-lambda/_apis/build/status/CenterDevice.ceres-lambda?branchName=master)](https://dev.azure.com/centerdevice/ceres-lambda/_build/latest?definitionId=17&branchName=master)
 
 == Functions
 
