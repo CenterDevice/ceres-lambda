@@ -42,6 +42,6 @@ clean-cross:
 
 clean-cross-me:
 	$(RUN_DOCKER) cargo clean --package $(FUNC_NAME)
-	rm target/x86_64-unknown-linux-musl/release/$(FUNC_NAME_BIN)
+	rm ../target/x86_64-unknown-linux-musl/release/$(FUNC_NAME_BIN)
 
 
