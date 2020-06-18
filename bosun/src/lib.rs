@@ -34,8 +34,8 @@ pub struct BosunClient {
     /// Timeout for http request connection
     pub timeout:      u64,
     pub default_tags: Tags,
-    pub username:   Option<String>,
-    pub password:   Option<String>
+    pub username:     Option<String>,
+    pub password:     Option<String>,
 }
 
 pub trait Bosun {
@@ -62,8 +62,7 @@ impl Bosun for BosunClient {
         internal_datum.add_tags(&self.default_tags);
 
         let encoded = internal_datum.to_json()?;
-        let res =
-            self.send_to_bosun_api("/api/put", &encoded, StatusCode::NO_CONTENT);
+        let res = self.send_to_bosun_api("/api/put", &encoded, StatusCode::NO_CONTENT);
         info!(
             "Sent datum '{:?}' to '{:?}' with result: '{:?}'.",
             encoded, &self.host, res
@@ -372,10 +371,7 @@ pub mod testing {
             Ok(())
         }
 
-        fn send_to_bosun_api(&self, _: &str, _: &str, _: StatusCode) -> BosunResult {
-            Ok(())
-        }
-
+        fn send_to_bosun_api(&self, _: &str, _: &str, _: StatusCode) -> BosunResult { Ok(()) }
     }
 
     #[derive(PartialEq, Eq, Debug)]
