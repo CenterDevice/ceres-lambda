@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "aws-watchtower"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "aws 0.0.2",
  "bosun 0.0.2",
