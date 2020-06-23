@@ -5,6 +5,10 @@ use failure::Error;
 use lambda_runtime::Context;
 use log::{debug, info};
 use serde_derive::Deserialize;
+use std::{
+    collections::HashSet,
+    sync::{Arc, RwLock},
+};
 
 // cf. https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/EventTypes.html#ec2_event_type
 // {
@@ -43,6 +47,31 @@ pub struct Ec2StateChangeDetail {
     pub state:       Ec2State,
 }
 
+lazy_static::lazy_static! {
+    /// This HashSet stores Ids of instanced that have been already silenced
+    /// -- yes, it's volatile, it's not multi-invocation safe.
+    ///
+    /// Problem: Ec2 State Change Events do not arrive in a strict manner from ShuttingDown, Stopping,
+    /// Stopped to Terminated. The order may vary. If we only react on ShuttingDown, we miss an earlier
+    /// indicator of the shut down in process and thus, miss the opportunity to silence early. This may
+    /// still lead to Unknown alarms in Bosun
+    ///
+    /// Goal: We have to react on any shut down indication State while preventing to set an silence
+    /// for each, because it creates unnecessary burden on Bosun and increases latency of this
+    /// function. Therefore, we need to preserve a state for each already processed / silenced instance
+    /// Id.
+    ///
+    /// Solution: We exploit the fact that these shut down State Change events come in quick
+    /// succession. This makes it highly probable that the succeeding events will hit the already
+    /// same, already running function instance. So we store the state in this static.
+    /// In case the function has been shut down and needs to be restarted cold or we hit another
+    /// instance of the function not much harm is done at we just fall back to the multiple silence
+    /// situation described above.
+    // Make this thread safe.
+    static ref SILENCED_INSTANCES: Arc<RwLock<HashSet<String>>> = Arc::new(RwLock::new(HashSet::new()));
+
+}
+
 pub fn handle<T: Bosun>(
     state_change: Ec2StateChangeEvent,
     _: &Context,
@@ -78,18 +107,37 @@ pub fn handle<T: Bosun>(
     let datum = Datum::now(metrics::EC2_STATE_CHANGE, &value, &tags);
     bosun.emit_datum(&datum)?;
 
+    let instance_going_down = state_change.detail.state.is_going_down();
+    let instance_already_silened = {
+        let silenced_instances = SILENCED_INSTANCES
+            .read()
+            .expect("Could not retrieve Mutex lock (r) for SILENCED_INSTANCES");
+        silenced_instances.contains(&state_change.detail.instance_id)
+    };
+
     // If we haven't found an ASG this instance belongs to, the
     // the instance cannot have been terminated because of an
     // auto-scaling lifecycle event. Therefore we're not going to set a silence to
     // prevent silencing a infrastructure problem.
     match mapping {
-        Some(ref mapping) if state_change.detail.state == Ec2State::ShuttingDown => {
+        Some(ref mapping) if instance_going_down && !instance_already_silened => {
             set_bosun_silence(
                 &state_change.detail.instance_id,
                 &config.ec2.scaledown_silence_duration,
                 mapping,
                 bosun,
             )?;
+            // Save state: this instance has been silenced
+            let mut silenced_instances = SILENCED_INSTANCES
+                .write()
+                .expect("Could not retrieve Mutex lock (w) for SILENCED_INSTANCES");
+            silenced_instances.insert(state_change.detail.instance_id.clone());
+        }
+        Some(_) if instance_going_down && instance_already_silened => {
+            debug!(
+                "Instance id ({}) has already been silenced, no silence necessary",
+                &state_change.detail.instance_id
+            );
         }
         Some(_) => {
             debug!(

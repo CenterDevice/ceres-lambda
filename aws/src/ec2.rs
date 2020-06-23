@@ -186,6 +186,17 @@ pub mod ec2 {
         Terminated   = 6,
     }
 
+    impl Ec2State {
+        pub fn is_coming_up(&self) -> bool {
+            match self {
+                Self::Pending | Self::Running => true,
+                _ => false,
+            }
+        }
+
+        pub fn is_going_down(&self) -> bool { !self.is_coming_up() }
+    }
+
     #[derive(Debug, Serialize)]
     pub struct Ec2StateInfo {
         pub ec2_instance_id: String,
