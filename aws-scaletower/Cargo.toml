@@ -1,0 +1,43 @@
+[package]
+name = "aws-scaletower"
+version = "0.0.1"
+authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
+build = "build.rs"
+
+edition = "2018"
+
+[[example]]
+name = "get_metrics"
+
+[lib]
+name = "aws_scaletower"
+path = "src/lib.rs"
+
+[dependencies]
+aws = { version = "0.0.2", path = "../aws" }
+bosun = { version = "0.0.2", path = "../bosun" }
+env_logger = "0.6"
+failure = "0.1"
+failure_derive = "0.1"
+lambda_runtime = "0.1"
+lazy_static = "1.2"
+log = "0.4"
+reqwest = "0.9"
+serde = "1"
+serde_derive = "1"
+serde_json = "1"
+structopt = "0.2"
+toml = "0.4"
+
+[dev-dependencies]
+chrono = "0.4"
+spectral = "^0.6"
+testing = { version = "0.0.1", path = "../testing" }
+
+[build-dependencies]
+vergen = "3"
+
+# Enable Debug Symbols in Release build
+#[profile.release]
+#debug = true
+

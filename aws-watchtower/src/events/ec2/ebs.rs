@@ -224,6 +224,7 @@ mod tests {
                 "arn:aws:kms:sa-east-1:0123456789ab:key/01234567-0123-0123-0123-0123456789ab".to_string(),
             ),
             encrypted:   true,
+            attachments: Vec::new(),
         };
         let result = HandleResult::VolumeInfo { volume_info };
 

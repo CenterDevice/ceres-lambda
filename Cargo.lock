@@ -68,6 +68,7 @@ dependencies = [
  "failure_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_autoscaling 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_cloudwatch 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_core 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_ec2 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_kms 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -75,6 +76,30 @@ dependencies = [
  "serde_derive 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "spectral 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "testing 0.0.1",
+]
+
+[[package]]
+name = "aws-scaletower"
+version = "0.0.1"
+dependencies = [
+ "aws 0.0.2",
+ "bosun 0.0.2",
+ "chrono 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lambda_runtime 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "reqwest 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spectral 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "testing 0.0.1",
+ "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vergen 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1486,6 +1511,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusoto_cloudwatch"
+version = "0.36.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_core 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_urlencoded 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xml-rs 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "rusoto_core"
 version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2433,6 +2469,7 @@ dependencies = [
 "checksum remove_dir_all 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "4a83fa3702a688b9359eccba92d153ac33fd2e8462f9e0e3fdf155239ea7792e"
 "checksum reqwest 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)" = "f88643aea3c1343c804950d7bf983bd2067f5ab59db6d613a08e05572f2714ab"
 "checksum rusoto_autoscaling 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "80a1c4f36d007eed8e96b0501593ed445c3cc6325579ff5fd4c689ef35c7eb5a"
+"checksum rusoto_cloudwatch 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4b11f37a855b24c1fde34ad3de8d1c2b9c5094f7799ba1681918a285cd9505a9"
 "checksum rusoto_core 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "18a699355ef3189e3bbf34b64ff5a31f06456b689b09d05cdb4a901dcf4406a8"
 "checksum rusoto_credential 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bcc8dd0f0a7e8b62f31aa23fa12fa0a7ac0e1eb52f6f4d4279d8a2ae51d8f099"
 "checksum rusoto_ec2 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "833e6433e688b642e1781458188e7d5b33f1e0e35aa0fff7c10f31c443daaf2e"

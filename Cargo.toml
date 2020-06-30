@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "aws",
+  "aws-scaletower",
   "aws-watchtower",
   "bosun",
   "testing",
