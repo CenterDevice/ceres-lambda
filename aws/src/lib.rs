@@ -1,6 +1,7 @@
 use failure::Fail;
 
 pub mod auth;
+pub mod cloudwatch;
 pub mod ec2;
 pub mod kms;
 
