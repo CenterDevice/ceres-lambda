@@ -16,6 +16,7 @@ path = "src/lib.rs"
 [dependencies]
 aws = { version = "0.0.2", path = "../aws" }
 bosun = { version = "0.0.2", path = "../bosun" }
+chrono = { version = "0.4", features = ["serde"] }
 env_logger = "0.6"
 failure = "0.1"
 failure_derive = "0.1"

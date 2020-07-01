@@ -11,6 +11,7 @@ path = "src/lib.rs"
 
 [dependencies]
 base64 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
 failure = "0.1"
 failure_derive = "0.1"
 log = "0.4"

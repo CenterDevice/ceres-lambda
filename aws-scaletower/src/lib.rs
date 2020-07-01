@@ -1,8 +1,10 @@
 use aws::ec2::ec2::{Filter, get_instances_ids};
 use aws::ec2::ebs::get_volumes_info;
 use aws::cloudwatch::{BurstBalanceMetricData, Metric, get_burst_balance};
+use chrono::prelude::*;
 use log::debug;
 use std::collections::HashMap;
+
 
 #[derive(Debug)]
 struct VolumeAttachment {
@@ -34,7 +36,7 @@ impl From<Vec<VolumeAttachment>> for  VolInstanceMap {
     }
 }
 
-pub fn do_stuff() {
+pub fn do_stuff(start: DateTime<Utc>, end: DateTime<Utc>) {
     let filters = vec![
         Filter {
             name: Some("instance-state-name".to_string()),
@@ -70,7 +72,7 @@ pub fn do_stuff() {
     let vols_instances_map: VolInstanceMap = vol_atts.into();
 
     let vol_ids = vols_instances_map.0.keys().cloned().collect();
-    let metric_data = get_burst_balance(vol_ids, "2020-07-01T06:00:00Z".to_string(), "2020-07-01T06:30:00Z".to_string()).expect("Failed to get burst balance.");
+    let metric_data = get_burst_balance(vol_ids, start, end).expect("Failed to get burst balance.");
     debug!("{:#?}", &metric_data);
 
     for m in metric_data {
