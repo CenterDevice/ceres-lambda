@@ -1,5 +1,6 @@
 use crate::{auth, AwsError};
 use chrono::prelude::*;
+use chrono::Duration;
 use failure::Error;
 use log::debug;
 use rusoto_core::{HttpClient, Region};
@@ -73,7 +74,9 @@ impl ConvertVolumeIdToQueryId for String {
     fn to_query_id(&self) -> String { self.replace("-", "_") }
 }
 
-pub fn get_burst_balance(volume_ids: Vec<String>, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Vec<BurstBalanceMetricData>, Error> {
+pub fn get_burst_balance<T: Into<Option<Duration>>>(volume_ids: Vec<String>, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalanceMetricData>, Error> {
+    let period = period.into();
+    let period = period.map(|x| x.num_seconds()).unwrap_or(300);
     debug!("Retrieving cloudwatch burst balance for volume ids '{:?}'", &volume_ids);
 
     // TODO: Credentials provider should be a parameter and shared with KMS
@@ -99,7 +102,7 @@ pub fn get_burst_balance(volume_ids: Vec<String>, start: DateTime<Utc>, end: Dat
                             }
                         ]),
                     },
-                    period: 300,
+                    period,
                     stat: "Minimum".to_string(),
                     unit: Some("Percent".to_string()),
                 }),

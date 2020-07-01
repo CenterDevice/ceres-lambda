@@ -8,5 +8,5 @@ fn main() {
     let end = Utc::now();
     let start = end - chrono::Duration::minutes(30);
 
-    do_stuff(start, end);
+    do_stuff(start, end, None);
 }
