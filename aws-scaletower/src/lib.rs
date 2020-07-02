@@ -1,9 +1,10 @@
 use aws::AwsClientConfig;
 use aws::ec2::ec2::{Filter, get_instances_ids};
 use aws::ec2::ebs::get_volumes_info;
-use aws::cloudwatch::{BurstBalanceMetricData, Metric, get_burst_balance};
+use aws::cloudwatch::{self, BurstBalanceMetricData, Metric};
 use chrono::prelude::*;
 use chrono::Duration;
+use failure::Error;
 use log::{debug, trace};
 use std::collections::HashMap;
 
@@ -76,7 +77,16 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
     }
 }
 
-pub fn do_stuff<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, start: DateTime<Utc>, end: DateTime<Utc>, period: T) {
+#[derive(Debug)]
+pub struct BurstBalance {
+    pub volume_id: String,
+    pub instance_id: String,
+    pub timestamp: Option<DateTime<Utc>>,
+    pub balance: Option<f64>,
+    pub forecast: Option<DateTime<Utc>>,
+}
+
+pub fn get_burst_balance<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalance>, Error> {
     let filters = vec![
         Filter {
             name: Some("instance-state-name".to_string()),
@@ -87,7 +97,7 @@ pub fn do_stuff<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, 
             values: Some(vec!["centerdevice-ec2-document_server*".to_string()]),
         },
     ];
-    let instance_ids = get_instances_ids(aws_client_config, filters).expect("Failed to get instance ids.");
+    let instance_ids = get_instances_ids(aws_client_config, filters)?;
     debug!("{:#?}", &instance_ids);
 
     let filters = vec![
@@ -96,14 +106,14 @@ pub fn do_stuff<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, 
             values: Some(instance_ids),
         },
     ];
-    let volume_infos = get_volumes_info(aws_client_config, filters).expect("Failed to get volumes infos.");
+    let volume_infos = get_volumes_info(aws_client_config, filters)?;
     debug!("{:#?}", &volume_infos);
 
     let vol_atts: Vec<_> = volume_infos
         .into_iter()
         .filter(|x| x.attachments.len() == 1) // Semantically possible, but we can only have 1 attachment, because we queried them via instance ids,
         .map(|x| VolumeAttachment { 
-            instance_id: x.attachments.into_iter().next().unwrap().instance_id.unwrap(),
+            instance_id: x.attachments.into_iter().next().unwrap().instance_id.unwrap(), // Safe, due to filter
             volume_id: x.volume_id
         })
         .collect();
@@ -112,18 +122,23 @@ pub fn do_stuff<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, 
     let vols_instances_map: VolInstanceMap = vol_atts.into();
 
     let vol_ids = vols_instances_map.0.keys().cloned().collect();
-    let metric_data = get_burst_balance(aws_client_config, vol_ids, start, end, period).expect("Failed to get burst balance.");
+    let metric_data = cloudwatch::get_burst_balance(aws_client_config, vol_ids, start, end, period)?;
     debug!("{:#?}", &metric_data);
 
-    for m in metric_data {
-        if let Some(last) = m.get_last_metric() {
-            let instance_id = vols_instances_map.0.get(&m.volume_id).map(|x| x.as_ref()).unwrap_or("<unknown>");
-            println!("Burst balance for vol {} attached to instance {} at {} is {}", &m.volume_id, &instance_id, &last.timestamp, &last.value);
-            let run_out = m.forecast_running_out_of_burst();
-            let time_left = run_out.map(|x| x - Utc::now()).map(|x| x.num_minutes());
-            println!("   -> running out of burst balance at {:?} witch is in {:?} min", run_out, time_left);
-        } else {
-            println!("No metric values found for vol {}", m.volume_id);
-        }
-    }
+    let burst_balances = metric_data
+        .into_iter()
+        .map(|metric| {
+            let forecast = metric.forecast_running_out_of_burst();
+            let (timestamp, balance) = metric.get_last_metric().map(|m| (Some(m.timestamp), Some(m.value))).unwrap_or_else(|| (None, None));
+            BurstBalance {
+                volume_id: metric.volume_id.clone(),
+                instance_id: vols_instances_map.0.get(&metric.volume_id).map(|x| x.as_ref()).unwrap_or("<unknown>").to_string(),
+                timestamp,
+                balance,
+                forecast,
+            }
+        })
+        .collect();
+
+    Ok(burst_balances)
 }

@@ -18,7 +18,24 @@ fn main() {
     let aws_client_config = AwsClientConfig::with_credentials_provider_and_region(credential_provider, Region::EuCentral1).expect("Failed to create AWS client config");
 
     let end = Utc::now();
-    let start = end - chrono::Duration::minutes(30);
+    let start = end - chrono::Duration::minutes(60);
+    let forecasts = get_burst_balance(&aws_client_config, start, end, None).expect("Failed to get burst balances");
 
-    do_stuff(&aws_client_config, start, end, None);
+    for m in forecasts {
+        match m {
+            BurstBalance { timestamp: Some(ref timestamp), balance: Some(ref balance), .. } =>
+                println!("Burst balance for vol {} attached to instance {} at {} is {}", &m.volume_id, &m.instance_id, timestamp, balance),
+            _ => 
+                println!("Burst balance for vol {} attached to instance {} not available", &m.volume_id, &m.instance_id),
+        };
+        match m {
+            BurstBalance { forecast: Some(ref forecast), .. } => {
+                let time_left = (*forecast - Utc::now()).num_minutes();
+                println!("   -> running out of burst balance at {:?} witch is in {:?} min", forecast, &time_left);
+            },
+            _ => {},
+        }
+    }
+
+
 }
