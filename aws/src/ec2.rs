@@ -1,9 +1,8 @@
 pub mod asg {
-    use crate::{auth, AwsClientConfig, AwsError};
+    use crate::{AwsClientConfig, AwsError};
     use failure::Error;
     use log::debug;
     use rusoto_autoscaling::{Autoscaling, AutoscalingClient, DescribeAutoScalingInstancesType};
-    use rusoto_core::{HttpClient, Region};
     use serde_derive::Serialize;
 
     #[derive(Debug, Serialize)]
@@ -19,12 +18,16 @@ pub mod asg {
         pub auto_scaling_group_name: String,
     }
 
-    pub fn get_asg_by_instance_id(aws_client_config: &AwsClientConfig, instance_id: String) -> Result<Option<AsgInfo>, Error> {
+    pub fn get_asg_by_instance_id(
+        aws_client_config: &AwsClientConfig,
+        instance_id: String,
+    ) -> Result<Option<AsgInfo>, Error> {
         debug!("Retrieving autoscaling information for instance id '{}'", &instance_id);
 
         let credentials_provider = aws_client_config.credentials_provider.clone();
         let http_client = aws_client_config.http_client.clone();
-        let as_client = AutoscalingClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
+        let as_client =
+            AutoscalingClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
         let request = DescribeAutoScalingInstancesType {
             instance_ids: Some(vec![instance_id.clone()]),
@@ -53,13 +56,12 @@ pub mod asg {
 }
 
 pub mod ebs {
-    use crate::{auth, AwsClientConfig, AwsError};
+    use crate::{AwsClientConfig, AwsError};
     use failure::Error;
     use log::debug;
-    use rusoto_core::{HttpClient, Region};
     use rusoto_ec2::{DescribeVolumesRequest, Ec2, Ec2Client, Filter};
     use serde_derive::Serialize;
-    use std::convert::{TryInto, TryFrom};
+    use std::convert::{TryFrom, TryInto};
 
     #[derive(Debug, Serialize)]
     pub struct VolumeInfo {
@@ -73,6 +75,7 @@ pub mod ebs {
 
     impl TryFrom<rusoto_ec2::Volume> for VolumeInfo {
         type Error = AwsError;
+
         fn try_from(vol: rusoto_ec2::Volume) -> Result<Self, Self::Error> {
             match vol {
                 rusoto_ec2::Volume {
@@ -84,9 +87,9 @@ pub mod ebs {
                     attachments,
                     ..
                 } => {
-                    let attachments: Vec<_> = attachments.map(|xs|
-                            xs.into_iter().map(TryFrom::try_from).collect::<Result<Vec<_>,_>>()
-                        ).unwrap_or_else(|| Ok(Vec::new()))?;
+                    let attachments: Vec<_> = attachments
+                        .map(|xs| xs.into_iter().map(TryFrom::try_from).collect::<Result<Vec<_>, _>>())
+                        .unwrap_or_else(|| Ok(Vec::new()))?;
                     Ok(VolumeInfo {
                         volume_id,
                         create_time,
@@ -96,24 +99,21 @@ pub mod ebs {
                         attachments,
                     })
                 }
-                _ => {
-                    Err(AwsError::GeneralError(
-                        "volume information result is incomplete",
-                    ))
-                }
+                _ => Err(AwsError::GeneralError("volume information result is incomplete")),
             }
         }
     }
 
     #[derive(Debug, Serialize)]
     pub struct Attachment {
-        pub volume_id: String,
-        pub state: String,
+        pub volume_id:   String,
+        pub state:       String,
         pub instance_id: Option<String>,
     }
 
     impl TryFrom<rusoto_ec2::VolumeAttachment> for Attachment {
         type Error = AwsError;
+
         fn try_from(attachment: rusoto_ec2::VolumeAttachment) -> Result<Self, Self::Error> {
             match attachment {
                 rusoto_ec2::VolumeAttachment {
@@ -142,7 +142,7 @@ pub mod ebs {
 
         let credentials_provider = aws_client_config.credentials_provider.clone();
         let http_client = aws_client_config.http_client.clone();
-        let ec2 = Ec2Client::new_with(http_client, credentials_provider,aws_client_config.region.clone());
+        let ec2 = Ec2Client::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
         let request = DescribeVolumesRequest {
             volume_ids: Some(vec![volume_id]),
@@ -165,7 +165,10 @@ pub mod ebs {
         Ok(volume_info)
     }
 
-    pub fn get_volumes_info<T: Into<Option<Vec<Filter>>>>(aws_client_config: &AwsClientConfig, filters: T) -> Result<Vec<VolumeInfo>, Error> {
+    pub fn get_volumes_info<T: Into<Option<Vec<Filter>>>>(
+        aws_client_config: &AwsClientConfig,
+        filters: T,
+    ) -> Result<Vec<VolumeInfo>, Error> {
         let filters = filters.into();
         debug!("Retrieving volume information with filter '{:?}'", &filters);
 
@@ -240,12 +243,11 @@ pub mod ebs {
 
 #[allow(clippy::module_inception)]
 pub mod ec2 {
-    use crate::{auth, AwsClientConfig, AwsError};
+    use crate::{AwsClientConfig, AwsError};
     use failure::Error;
     use log::debug;
-    use rusoto_core::{HttpClient, Region};
-    use rusoto_ec2::{DescribeInstancesRequest, Ec2, Ec2Client};
     pub use rusoto_ec2::Filter;
+    use rusoto_ec2::{DescribeInstancesRequest, Ec2, Ec2Client};
     use serde_derive::{Deserialize, Serialize};
 
     #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, Copy)]
@@ -276,7 +278,10 @@ pub mod ec2 {
         pub state:           Ec2State,
     }
 
-    pub fn get_instances_ids<T: Into<Option<Vec<Filter>>>>(aws_client_config: &AwsClientConfig, filters: T) -> Result<Vec<String>, Error> {
+    pub fn get_instances_ids<T: Into<Option<Vec<Filter>>>>(
+        aws_client_config: &AwsClientConfig,
+        filters: T,
+    ) -> Result<Vec<String>, Error> {
         let filters = filters.into();
         debug!("Retrieving ec2 instance information for filters '{:?}'", &filters);
 

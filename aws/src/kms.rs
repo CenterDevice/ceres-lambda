@@ -1,7 +1,6 @@
-use crate::{auth, AwsClientConfig};
+use crate::AwsClientConfig;
 use failure::{Error, Fail};
 use log::{debug, warn};
-use rusoto_core::{HttpClient, Region};
 use rusoto_kms::{DecryptError, DecryptRequest, Kms, KmsClient};
 use std::str;
 

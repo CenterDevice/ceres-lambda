@@ -1,6 +1,8 @@
 use crate::{asg_mapping::Mapping, config::FunctionConfig, events::HandleResult, metrics};
-use aws::AwsClientConfig;
-use aws::ec2::ec2::{Ec2State, Ec2StateInfo};
+use aws::{
+    ec2::ec2::{Ec2State, Ec2StateInfo},
+    AwsClientConfig,
+};
 use bosun::{Bosun, Datum, Silence, Tags};
 use failure::Error;
 use lambda_runtime::Context;

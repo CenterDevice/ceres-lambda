@@ -28,7 +28,9 @@ fn main() {
         eprintln!("{:#?}", enc_config);
     }
 
-    let config = enc_config.decrypt(&aws_client_config).expect("Failed to decrypt encrypted config file");
+    let config = enc_config
+        .decrypt(&aws_client_config)
+        .expect("Failed to decrypt encrypted config file");
     if args.verbose > 0 {
         eprintln!("{:#?}", config);
     }

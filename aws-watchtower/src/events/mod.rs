@@ -1,6 +1,8 @@
 use crate::{config::FunctionConfig, error::AwsWatchtowerError, metrics};
-use aws::AwsClientConfig;
-use aws::ec2::{asg::AsgScalingInfo, ebs::VolumeInfo, ec2::Ec2StateInfo};
+use aws::{
+    ec2::{asg::AsgScalingInfo, ebs::VolumeInfo, ec2::Ec2StateInfo},
+    AwsClientConfig,
+};
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
 use lambda_runtime::Context;
@@ -39,7 +41,13 @@ pub enum HandleResult {
     VolumeInfo { volume_info: VolumeInfo },
 }
 
-pub fn handle<T: Bosun>(aws_client_config: &AwsClientConfig, json: Value, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
+pub fn handle<T: Bosun>(
+    aws_client_config: &AwsClientConfig,
+    json: Value,
+    ctx: &Context,
+    config: &FunctionConfig,
+    bosun: &T,
+) -> Result<HandleResult, Error> {
     let tags = Tags::new();
     let datum = Datum::now(metrics::LAMBDA_INVOCATION_COUNT, "1", &tags);
     bosun.emit_datum(&datum)?;

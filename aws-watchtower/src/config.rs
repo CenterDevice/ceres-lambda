@@ -1,5 +1,5 @@
 use crate::{asg_mapping::Mappings, AwsWatchtowerError};
-use aws::{AwsClientConfig, kms};
+use aws::{kms, AwsClientConfig};
 use clams::config::*;
 use clams_derive::Config;
 use failure::{Error, Fail};

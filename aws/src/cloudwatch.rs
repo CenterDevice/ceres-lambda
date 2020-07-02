@@ -1,20 +1,28 @@
 use crate::{AwsClientConfig, AwsError};
-use chrono::prelude::*;
-use chrono::Duration;
+use chrono::{prelude::*, Duration};
 use failure::Error;
 use log::debug;
-use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Dimension, GetMetricDataInput, MetricDataQuery, MetricStat, Metric as RusotoMetric};
+use rusoto_cloudwatch::{
+    CloudWatch,
+    CloudWatchClient,
+    Dimension,
+    GetMetricDataInput,
+    Metric as RusotoMetric,
+    MetricDataQuery,
+    MetricStat,
+};
 use serde_derive::Serialize;
-use std::convert::{TryInto, TryFrom};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Serialize)]
 pub struct BurstBalanceMetricData {
     pub volume_id: String,
-    pub metrics: Vec<Metric>,
+    pub metrics:   Vec<Metric>,
 }
 
 impl TryFrom<rusoto_cloudwatch::MetricDataResult> for BurstBalanceMetricData {
     type Error = AwsError;
+
     fn try_from(x: rusoto_cloudwatch::MetricDataResult) -> Result<Self, Self::Error> {
         match x {
             rusoto_cloudwatch::MetricDataResult {
@@ -29,37 +37,31 @@ impl TryFrom<rusoto_cloudwatch::MetricDataResult> for BurstBalanceMetricData {
                     .zip(values.into_iter())
                     .map(|x| x.try_into())
                     .collect();
-                let metrics = metrics
-                    .map_err(|_| AwsError::GeneralError("Failed to parse timestamp from metric data"))?;
+                let metrics =
+                    metrics.map_err(|_| AwsError::GeneralError("Failed to parse timestamp from metric data"))?;
                 Ok(BurstBalanceMetricData {
                     volume_id: id.to_volume_id(),
                     metrics,
                 })
             }
-            _ => {
-                Err(AwsError::GeneralError(
-                    "volume information result is incomplete",
-                ))
-            }
+            _ => Err(AwsError::GeneralError("volume information result is incomplete")),
         }
     }
-} 
+}
 
 #[derive(Debug, Serialize)]
 pub struct Metric {
     pub timestamp: DateTime<Utc>,
-    pub value: f64,
+    pub value:     f64,
 }
 
 impl TryFrom<(String, f64)> for Metric {
     type Error = chrono::format::ParseError;
+
     fn try_from(x: (String, f64)) -> Result<Self, Self::Error> {
         let (timestamp, value) = x;
         let timestamp = timestamp.parse::<DateTime<Utc>>()?;
-        Ok(Metric {
-            timestamp,
-            value,
-        })
+        Ok(Metric { timestamp, value })
     }
 }
 
@@ -70,10 +72,17 @@ trait ConvertVolumeIdToQueryId {
 
 impl ConvertVolumeIdToQueryId for String {
     fn to_volume_id(&self) -> String { self.replace("_", "-") }
+
     fn to_query_id(&self) -> String { self.replace("-", "_") }
 }
 
-pub fn get_burst_balances<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, volume_ids: Vec<String>, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalanceMetricData>, Error> {
+pub fn get_burst_balances<T: Into<Option<Duration>>>(
+    aws_client_config: &AwsClientConfig,
+    volume_ids: Vec<String>,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    period: T,
+) -> Result<Vec<BurstBalanceMetricData>, Error> {
     let period = period.into();
     let period = period.map(|x| x.num_seconds()).unwrap_or(300);
     debug!("Retrieving cloudwatch burst balance for volume ids '{:?}'", &volume_ids);
@@ -84,19 +93,17 @@ pub fn get_burst_balances<T: Into<Option<Duration>>>(aws_client_config: &AwsClie
 
     let metric_data_queries: Vec<_> = volume_ids
         .into_iter()
-        .map(|x|
+        .map(|x| {
             MetricDataQuery {
                 id: x.to_query_id(),
                 metric_stat: Some(MetricStat {
                     metric: RusotoMetric {
-                        namespace: Some("AWS/EBS".to_string()),
+                        namespace:   Some("AWS/EBS".to_string()),
                         metric_name: Some("BurstBalance".to_string()),
-                        dimensions: Some(vec![
-                            Dimension {
-                                name: "VolumeId".to_string(),
-                                value: x,
-                            }
-                        ]),
+                        dimensions:  Some(vec![Dimension {
+                            name:  "VolumeId".to_string(),
+                            value: x,
+                        }]),
                     },
                     period,
                     stat: "Minimum".to_string(),
@@ -105,7 +112,7 @@ pub fn get_burst_balances<T: Into<Option<Duration>>>(aws_client_config: &AwsClie
                 return_data: Some(true),
                 ..Default::default()
             }
-        )
+        })
         .collect();
 
     let start_time = start.to_rfc3339();
@@ -132,5 +139,3 @@ pub fn get_burst_balances<T: Into<Option<Duration>>>(aws_client_config: &AwsClie
 
     Ok(metric_data_results)
 }
-
-
