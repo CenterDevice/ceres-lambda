@@ -1,5 +1,6 @@
 use aws_watchtower::config::EncryptedFunctionConfig;
 
+use aws::AwsClientConfig;
 use clams::config::Config;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -20,12 +21,14 @@ struct Opt {
 fn main() {
     let args = Opt::from_args();
 
+    let aws_client_config = AwsClientConfig::new().expect("Failed to AWS client config.");
+
     let enc_config = EncryptedFunctionConfig::from_file(args.file).expect("Failed to read encrypted config file");
     if args.verbose > 1 {
         eprintln!("{:#?}", enc_config);
     }
 
-    let config = enc_config.decrypt().expect("Failed to decrypt encrypted config file");
+    let config = enc_config.decrypt(&aws_client_config).expect("Failed to decrypt encrypted config file");
     if args.verbose > 0 {
         eprintln!("{:#?}", config);
     }

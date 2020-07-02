@@ -1,9 +1,8 @@
-use crate::{auth, AwsError};
+use crate::{AwsClientConfig, AwsError};
 use chrono::prelude::*;
 use chrono::Duration;
 use failure::Error;
 use log::debug;
-use rusoto_core::{HttpClient, Region};
 use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Dimension, GetMetricDataInput, MetricDataQuery, MetricStat, Metric as RusotoMetric};
 use serde_derive::Serialize;
 use std::convert::{TryInto, TryFrom};
@@ -74,17 +73,14 @@ impl ConvertVolumeIdToQueryId for String {
     fn to_query_id(&self) -> String { self.replace("-", "_") }
 }
 
-pub fn get_burst_balance<T: Into<Option<Duration>>>(volume_ids: Vec<String>, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalanceMetricData>, Error> {
+pub fn get_burst_balance<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, volume_ids: Vec<String>, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalanceMetricData>, Error> {
     let period = period.into();
     let period = period.map(|x| x.num_seconds()).unwrap_or(300);
     debug!("Retrieving cloudwatch burst balance for volume ids '{:?}'", &volume_ids);
 
-    // TODO: Credentials provider should be a parameter and shared with KMS
-    let credentials_provider = auth::create_provider()?;
-    let http_client = HttpClient::new()?;
-
-    // TODO: Region should be configurable; or ask the environment of this call
-    let cloudwatch = CloudWatchClient::new_with(http_client, credentials_provider, Region::EuCentral1);
+    let credentials_provider = aws_client_config.credentials_provider.clone();
+    let http_client = aws_client_config.http_client.clone();
+    let cloudwatch = CloudWatchClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
     let metric_data_queries: Vec<_> = volume_ids
         .into_iter()

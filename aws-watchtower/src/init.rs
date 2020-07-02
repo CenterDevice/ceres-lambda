@@ -3,6 +3,7 @@ use crate::{
     error::AwsWatchtowerError,
     metrics,
 };
+use aws::AwsClientConfig;
 use bosun::{Bosun, BosunClient, Metadata};
 use clams::config::Config;
 use failure::Error;
@@ -14,7 +15,7 @@ pub fn log() {
     debug!("Initialized logger.");
 }
 
-pub fn config() -> Result<FunctionConfig, Error> {
+pub fn config(aws_client_config: &AwsClientConfig) -> Result<FunctionConfig, Error> {
     let env_config = EnvConfig::from_env()?;
     debug!("Loaded environment variables configuration = {:?}.", &env_config);
 
@@ -25,7 +26,7 @@ pub fn config() -> Result<FunctionConfig, Error> {
         "Loaded encrypted configuration from file {:?}.",
         &env_config.config_file
     );
-    let config = encrypted_config.decrypt()?;
+    let config = encrypted_config.decrypt(aws_client_config)?;
     debug!("Decrypted encrypted configuration.");
 
     Ok(config)

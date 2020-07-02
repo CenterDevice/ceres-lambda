@@ -1,4 +1,5 @@
 use crate::{config::FunctionConfig, error::AwsWatchtowerError, lambda::LambdaResult};
+use aws::AwsClientConfig;
 use failure::Error;
 use lambda_runtime::{error::HandlerError, Context};
 use log::info;
@@ -18,7 +19,9 @@ mod metrics;
 static INVOCATION_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 lazy_static::lazy_static! {
-    static ref CONFIG: FunctionConfig = init::config()
+    static ref AWS_CLIENT_CONFIG: AwsClientConfig = AwsClientConfig::new()
+        .expect("Failed to AWS client config.");
+    static ref CONFIG: FunctionConfig = init::config(&AWS_CLIENT_CONFIG)
         .expect("Failed to initialize configuration.");
 }
 
@@ -45,7 +48,7 @@ fn run(json: Value, ctx: &Context) -> Result<(), Error> {
     }
     info!("Initialization complete.");
 
-    let res = events::handle(json, ctx, &CONFIG, &bosun);
+    let res = events::handle(&AWS_CLIENT_CONFIG, json, ctx, &CONFIG, &bosun);
     info!("Finished event handling.");
 
     log_result(&res, ctx);

@@ -1,6 +1,5 @@
 use crate::{asg_mapping::Mappings, AwsWatchtowerError};
-
-use aws::kms;
+use aws::{AwsClientConfig, kms};
 use clams::config::*;
 use clams_derive::Config;
 use failure::{Error, Fail};
@@ -15,8 +14,8 @@ pub struct EncryptedFunctionConfig {
 }
 
 impl EncryptedFunctionConfig {
-    pub fn decrypt(self) -> Result<FunctionConfig, Error> {
-        let bosun_auth_password = kms::decrypt_base64(&self.bosun.password)?;
+    pub fn decrypt(self, aws_client_config: &AwsClientConfig) -> Result<FunctionConfig, Error> {
+        let bosun_auth_password = kms::decrypt_base64(aws_client_config, &self.bosun.password)?;
 
         let bosun = Bosun {
             password: bosun_auth_password,

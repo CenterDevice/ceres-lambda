@@ -1,5 +1,5 @@
 pub mod asg {
-    use crate::{auth, AwsError};
+    use crate::{auth, AwsClientConfig, AwsError};
     use failure::Error;
     use log::debug;
     use rusoto_autoscaling::{Autoscaling, AutoscalingClient, DescribeAutoScalingInstancesType};
@@ -19,15 +19,12 @@ pub mod asg {
         pub auto_scaling_group_name: String,
     }
 
-    pub fn get_asg_by_instance_id(instance_id: String) -> Result<Option<AsgInfo>, Error> {
+    pub fn get_asg_by_instance_id(aws_client_config: &AwsClientConfig, instance_id: String) -> Result<Option<AsgInfo>, Error> {
         debug!("Retrieving autoscaling information for instance id '{}'", &instance_id);
 
-        // TODO: Credentials provider should be a parameter and shared with KMS
-        let credentials_provider = auth::create_provider()?;
-        let http_client = HttpClient::new()?;
-
-        // TODO: Region should be configurable; or ask the environment of this call
-        let as_client = AutoscalingClient::new_with(http_client, credentials_provider, Region::EuCentral1);
+        let credentials_provider = aws_client_config.credentials_provider.clone();
+        let http_client = aws_client_config.http_client.clone();
+        let as_client = AutoscalingClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
         let request = DescribeAutoScalingInstancesType {
             instance_ids: Some(vec![instance_id.clone()]),
@@ -56,7 +53,7 @@ pub mod asg {
 }
 
 pub mod ebs {
-    use crate::{auth, AwsError};
+    use crate::{auth, AwsClientConfig, AwsError};
     use failure::Error;
     use log::debug;
     use rusoto_core::{HttpClient, Region};
@@ -140,15 +137,12 @@ pub mod ebs {
         }
     }
 
-    pub fn get_volume_info(volume_id: String) -> Result<VolumeInfo, Error> {
+    pub fn get_volume_info(aws_client_config: &AwsClientConfig, volume_id: String) -> Result<VolumeInfo, Error> {
         debug!("Retrieving volume information for volume id '{}'", &volume_id);
 
-        // TODO: Credentials provider should be a parameter and shared with KMS
-        let credentials_provider = auth::create_provider()?;
-        let http_client = HttpClient::new()?;
-
-        // TODO: Region should be configurable; or ask the environment of this call
-        let ec2 = Ec2Client::new_with(http_client, credentials_provider, Region::EuCentral1);
+        let credentials_provider = aws_client_config.credentials_provider.clone();
+        let http_client = aws_client_config.http_client.clone();
+        let ec2 = Ec2Client::new_with(http_client, credentials_provider,aws_client_config.region.clone());
 
         let request = DescribeVolumesRequest {
             volume_ids: Some(vec![volume_id]),
@@ -171,16 +165,13 @@ pub mod ebs {
         Ok(volume_info)
     }
 
-    pub fn get_volumes_info<T: Into<Option<Vec<Filter>>>>(filters: T) -> Result<Vec<VolumeInfo>, Error> {
+    pub fn get_volumes_info<T: Into<Option<Vec<Filter>>>>(aws_client_config: &AwsClientConfig, filters: T) -> Result<Vec<VolumeInfo>, Error> {
         let filters = filters.into();
         debug!("Retrieving volume information with filter '{:?}'", &filters);
 
-        // TODO: Credentials provider should be a parameter and shared with KMS
-        let credentials_provider = auth::create_provider()?;
-        let http_client = HttpClient::new()?;
-
-        // TODO: Region should be configurable; or ask the environment of this call
-        let ec2 = Ec2Client::new_with(http_client, credentials_provider, Region::EuCentral1);
+        let credentials_provider = aws_client_config.credentials_provider.clone();
+        let http_client = aws_client_config.http_client.clone();
+        let ec2 = Ec2Client::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
         let request = DescribeVolumesRequest {
             filters,
@@ -201,9 +192,9 @@ pub mod ebs {
         Ok(volume_infos)
     }
 
-    pub fn get_volume_info_by_arn(arn: String) -> Result<VolumeInfo, Error> {
+    pub fn get_volume_info_by_arn(aws_client_config: &AwsClientConfig, arn: String) -> Result<VolumeInfo, Error> {
         let vol_id = id_from_arn(&arn)?;
-        get_volume_info(vol_id.to_string())
+        get_volume_info(aws_client_config, vol_id.to_string())
     }
 
     fn id_from_arn(arn: &str) -> Result<&str, Error> {
@@ -249,7 +240,7 @@ pub mod ebs {
 
 #[allow(clippy::module_inception)]
 pub mod ec2 {
-    use crate::{auth, AwsError};
+    use crate::{auth, AwsClientConfig, AwsError};
     use failure::Error;
     use log::debug;
     use rusoto_core::{HttpClient, Region};
@@ -285,16 +276,13 @@ pub mod ec2 {
         pub state:           Ec2State,
     }
 
-    pub fn get_instances_ids<T: Into<Option<Vec<Filter>>>>(filters: T) -> Result<Vec<String>, Error> {
+    pub fn get_instances_ids<T: Into<Option<Vec<Filter>>>>(aws_client_config: &AwsClientConfig, filters: T) -> Result<Vec<String>, Error> {
         let filters = filters.into();
         debug!("Retrieving ec2 instance information for filters '{:?}'", &filters);
 
-        // TODO: Credentials provider should be a parameter and shared with KMS
-        let credentials_provider = auth::create_provider()?;
-        let http_client = HttpClient::new()?;
-
-        // TODO: Region should be configurable; or ask the environment of this call
-        let ec2 = Ec2Client::new_with(http_client, credentials_provider, Region::EuCentral1);
+        let credentials_provider = aws_client_config.credentials_provider.clone();
+        let http_client = aws_client_config.http_client.clone();
+        let ec2 = Ec2Client::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
         let request = DescribeInstancesRequest {
             filters,

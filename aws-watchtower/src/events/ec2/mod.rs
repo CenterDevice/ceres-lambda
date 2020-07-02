@@ -1,4 +1,5 @@
 use crate::{config::FunctionConfig, events::HandleResult};
+use aws::AwsClientConfig;
 use bosun::Bosun;
 use failure::Error;
 use lambda_runtime::Context;
@@ -21,14 +22,15 @@ pub enum Ec2Event {
 }
 
 pub fn handle<T: Bosun>(
+    aws_client_config: &AwsClientConfig,
     event: Ec2Event,
     ctx: &Context,
     config: &FunctionConfig,
     bosun: &T,
 ) -> Result<HandleResult, Error> {
     match event {
-        Ec2Event::Ec2StateChangeEvent(event) => ec2::handle(event, ctx, config, bosun),
-        Ec2Event::VolumeEvent(event) => ebs::handle(event, ctx, config, bosun),
+        Ec2Event::Ec2StateChangeEvent(event) => ec2::handle(aws_client_config, event, ctx, config, bosun),
+        Ec2Event::VolumeEvent(event) => ebs::handle(aws_client_config, event, ctx, config, bosun),
     }
 }
 

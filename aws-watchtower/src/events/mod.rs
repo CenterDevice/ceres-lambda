@@ -1,4 +1,5 @@
 use crate::{config::FunctionConfig, error::AwsWatchtowerError, metrics};
+use aws::AwsClientConfig;
 use aws::ec2::{asg::AsgScalingInfo, ebs::VolumeInfo, ec2::Ec2StateInfo};
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
@@ -38,12 +39,12 @@ pub enum HandleResult {
     VolumeInfo { volume_info: VolumeInfo },
 }
 
-pub fn handle<T: Bosun>(json: Value, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
+pub fn handle<T: Bosun>(aws_client_config: &AwsClientConfig, json: Value, ctx: &Context, config: &FunctionConfig, bosun: &T) -> Result<HandleResult, Error> {
     let tags = Tags::new();
     let datum = Datum::now(metrics::LAMBDA_INVOCATION_COUNT, "1", &tags);
     bosun.emit_datum(&datum)?;
 
-    let res = parse_event(json).and_then(|event| handle_event(event, ctx, &config, bosun));
+    let res = parse_event(json).and_then(|event| handle_event(aws_client_config, event, ctx, &config, bosun));
 
     match res {
         Ok(_) => {
@@ -68,6 +69,7 @@ fn parse_event(json: Value) -> Result<Event, Error> {
 }
 
 fn handle_event<T: Bosun>(
+    aws_client_config: &AwsClientConfig,
     event: Event,
     ctx: &Context,
     config: &FunctionConfig,
@@ -75,7 +77,7 @@ fn handle_event<T: Bosun>(
 ) -> Result<HandleResult, Error> {
     match event {
         Event::Asg(asg) => asg::handle(asg, ctx, config, bosun),
-        Event::Ec2(ec2) => ec2::handle(ec2, ctx, config, bosun),
+        Event::Ec2(ec2) => ec2::handle(aws_client_config, ec2, ctx, config, bosun),
         Event::Ping(ping) => ping::handle(ping, ctx, config, bosun),
     }
 }
@@ -109,6 +111,7 @@ mod tests {
     fn test_handle_ping() {
         setup();
 
+        let aws_client_config = AwsClientConfig::new().expect("Failed to create AWS client config.");
         let bosun: BosunMockClient = Default::default();
         let ctx = Context::default();
         let config = FunctionConfig::default();
@@ -117,7 +120,7 @@ mod tests {
         );
         let expected = BosunCallStats::new(0, 2, 0);
 
-        let res = handle(event, &ctx, &config, &bosun);
+        let res = handle(&aws_client_config, event, &ctx, &config, &bosun);
         assert_that!(&res).is_ok();
 
         let bosun_stats = bosun.to_stats();
@@ -131,6 +134,7 @@ mod tests {
     fn test_handle_asg_successful_termination() {
         setup();
 
+        let aws_client_config = AwsClientConfig::new().expect("Failed to create AWS client config.");
         let bosun: BosunMockClient = Default::default();
         let ctx = Context::default();
         let mut config = FunctionConfig::default();
@@ -173,7 +177,7 @@ mod tests {
         let event = serde_json::from_str(&asg_event).unwrap();
         let expected = BosunCallStats::new(0, 3, 1);
 
-        let res = handle(event, &ctx, &config, &bosun);
+        let res = handle(&aws_client_config, event, &ctx, &config, &bosun);
         assert_that!(&res).is_ok();
 
         let bosun_stats = bosun.to_stats();

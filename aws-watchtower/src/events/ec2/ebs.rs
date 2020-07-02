@@ -1,6 +1,6 @@
 use crate::{config::FunctionConfig, events::HandleResult, metrics};
 
-use aws::{self, AwsError};
+use aws::{self, AwsClientConfig, AwsError};
 use bosun::{Bosun, Datum, Tags};
 use failure::Error;
 use lambda_runtime::Context;
@@ -100,6 +100,7 @@ impl fmt::Display for VolumeResult {
 }
 
 pub fn handle<T: Bosun>(
+    aws_client_config: &AwsClientConfig,
     event: VolumeEvent,
     _: &Context,
     _config: &FunctionConfig,
@@ -131,7 +132,7 @@ pub fn handle<T: Bosun>(
             .resources
             .first()
             .ok_or_else(|| Error::from(AwsError::GeneralError("no volume ids found in event")))?;
-        let volume_info = aws::ec2::ebs::get_volume_info_by_arn(volume_arn.to_string())?;
+        let volume_info = aws::ec2::ebs::get_volume_info_by_arn(aws_client_config, volume_arn.to_string())?;
         info!(
             "Details for '{}' created volume: '{:?}'",
             if value == 0 { "successfully" } else { "unsucessfully" },

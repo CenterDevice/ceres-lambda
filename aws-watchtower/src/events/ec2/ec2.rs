@@ -1,4 +1,5 @@
 use crate::{asg_mapping::Mapping, config::FunctionConfig, events::HandleResult, metrics};
+use aws::AwsClientConfig;
 use aws::ec2::ec2::{Ec2State, Ec2StateInfo};
 use bosun::{Bosun, Datum, Silence, Tags};
 use failure::Error;
@@ -73,6 +74,7 @@ lazy_static::lazy_static! {
 }
 
 pub fn handle<T: Bosun>(
+    aws_client_config: &AwsClientConfig,
     state_change: Ec2StateChangeEvent,
     _: &Context,
     config: &FunctionConfig,
@@ -81,7 +83,7 @@ pub fn handle<T: Bosun>(
     info!("Received Ec2StateChangeEvent {:?}.", state_change);
 
     // Get ASG for this instance if any
-    let asg = aws::ec2::asg::get_asg_by_instance_id(state_change.detail.instance_id.clone())?;
+    let asg = aws::ec2::asg::get_asg_by_instance_id(aws_client_config, state_change.detail.instance_id.clone())?;
     info!(
         "Mapped instance id to ASG '{:?}'.",
         asg.as_ref()

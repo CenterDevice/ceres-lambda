@@ -1,4 +1,4 @@
-use crate::auth;
+use crate::{auth, AwsClientConfig};
 use failure::{Error, Fail};
 use log::{debug, warn};
 use rusoto_core::{HttpClient, Region};
@@ -13,19 +13,17 @@ enum KmsError {
     NoPlainText,
 }
 
-pub fn decrypt_base64(base64_str: &str) -> Result<String, Error> {
-    do_decrypt_base64(base64_str).map_err(|e| e.context(KmsError::DecryptionFailed).into())
+pub fn decrypt_base64(aws_client_config: &AwsClientConfig, base64_str: &str) -> Result<String, Error> {
+    do_decrypt_base64(aws_client_config, base64_str).map_err(|e| e.context(KmsError::DecryptionFailed).into())
 }
 
-fn do_decrypt_base64(base64_str: &str) -> Result<String, Error> {
+fn do_decrypt_base64(aws_client_config: &AwsClientConfig, base64_str: &str) -> Result<String, Error> {
     debug!("Decrypting base64 str.");
     let blob = base64::decode(base64_str)?;
 
-    let credentials_provider = auth::create_provider()?;
-    let http_client = HttpClient::new()?;
-
-    // TODO: Region should be configurable; or ask the environment of this call
-    let kms = KmsClient::new_with(http_client, credentials_provider, Region::EuCentral1);
+    let credentials_provider = aws_client_config.credentials_provider.clone();
+    let http_client = aws_client_config.http_client.clone();
+    let kms = KmsClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
     let decrypt_request = DecryptRequest {
         ciphertext_blob:    blob,
         encryption_context: None,

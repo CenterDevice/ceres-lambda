@@ -1,3 +1,4 @@
+use aws::AwsClientConfig;
 use aws::ec2::ec2::{Filter, get_instances_ids};
 use aws::ec2::ebs::get_volumes_info;
 use aws::cloudwatch::{BurstBalanceMetricData, Metric, get_burst_balance};
@@ -75,7 +76,7 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
     }
 }
 
-pub fn do_stuff<T: Into<Option<Duration>>>(start: DateTime<Utc>, end: DateTime<Utc>, period: T) {
+pub fn do_stuff<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, start: DateTime<Utc>, end: DateTime<Utc>, period: T) {
     let filters = vec![
         Filter {
             name: Some("instance-state-name".to_string()),
@@ -86,7 +87,7 @@ pub fn do_stuff<T: Into<Option<Duration>>>(start: DateTime<Utc>, end: DateTime<U
             values: Some(vec!["centerdevice-ec2-document_server*".to_string()]),
         },
     ];
-    let instance_ids = get_instances_ids(filters).expect("Failed to get instance ids.");
+    let instance_ids = get_instances_ids(aws_client_config, filters).expect("Failed to get instance ids.");
     debug!("{:#?}", &instance_ids);
 
     let filters = vec![
@@ -95,7 +96,7 @@ pub fn do_stuff<T: Into<Option<Duration>>>(start: DateTime<Utc>, end: DateTime<U
             values: Some(instance_ids),
         },
     ];
-    let volume_infos = get_volumes_info(filters).expect("Failed to get volumes infos.");
+    let volume_infos = get_volumes_info(aws_client_config, filters).expect("Failed to get volumes infos.");
     debug!("{:#?}", &volume_infos);
 
     let vol_atts: Vec<_> = volume_infos
@@ -111,7 +112,7 @@ pub fn do_stuff<T: Into<Option<Duration>>>(start: DateTime<Utc>, end: DateTime<U
     let vols_instances_map: VolInstanceMap = vol_atts.into();
 
     let vol_ids = vols_instances_map.0.keys().cloned().collect();
-    let metric_data = get_burst_balance(vol_ids, start, end, period).expect("Failed to get burst balance.");
+    let metric_data = get_burst_balance(aws_client_config, vol_ids, start, end, period).expect("Failed to get burst balance.");
     debug!("{:#?}", &metric_data);
 
     for m in metric_data {

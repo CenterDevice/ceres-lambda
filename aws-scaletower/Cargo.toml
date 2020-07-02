@@ -25,6 +25,7 @@ lazy_static = "1.2"
 linreg = "0.2"
 log = "0.4"
 reqwest = "0.9"
+rusoto_core = "0.36"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
@@ -32,7 +33,6 @@ structopt = "0.2"
 toml = "0.4"
 
 [dev-dependencies]
-chrono = "0.4"
 spectral = "^0.6"
 testing = { version = "0.0.1", path = "../testing" }
 
