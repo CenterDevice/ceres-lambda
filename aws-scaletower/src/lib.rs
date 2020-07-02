@@ -50,6 +50,14 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
             .collect();
         let lin_reg = linear_regression_of(&tuples);
         let (slope, intercept): (f64, f64) = match lin_reg {
+            Ok((slope, _)) if slope >= 0.0 => {
+                // If the slope 0, we have a constant value and thus, the forecast it "oo"
+                // If the slope is positive (>0), we are gaining for the burst balance.
+                // In both cases no sensible forecast until the volumes run out of burst can be
+                // computed.
+                trace!("No forecast computed for vol {}.", self.volume_id);
+                return None;
+            },
             Ok((slope, intercept)) => {
                 trace!(
                     "Linear regression result for vol {} and {} metric data points: intercept={}, slope={}.",
@@ -59,7 +67,7 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
                     slope
                 );
                 (slope, intercept)
-            }
+            },
             Err(err) => {
                 trace!(
                     "Linear regression for vol {} and {} metric data points failed, because {}",
@@ -70,15 +78,6 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
                 return None;
             }
         };
-
-        if slope >= 0.0 {
-            // If the slope 0, we have a constant value and thus, the forecast it "oo"
-            // If the slope is positive (>0), we are gaining for the burst balance.
-            // In both cases no sensible forecast until the volumes run out of burst can be
-            // computed.
-            trace!("No forecast computed for vol {}.", self.volume_id);
-            return None;
-        }
 
         let forecast_unix = -1.0 * intercept / slope;
         let forecast = Utc.timestamp(forecast_unix as i64, 0);
