@@ -4,6 +4,7 @@ use aws::{
 };
 use aws_scaletower::*;
 use chrono::prelude::*;
+use prettytable::{format, Table, Row, Cell};
 use rusoto_core::Region;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -57,35 +58,73 @@ fn main() {
     let start = end - chrono::Duration::minutes(60);
     let forecasts = get_burst_balances(&aws_client_config, start, end, None).expect("Failed to get burst balances");
 
+    let mut table = Table::new();
+    table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+    table.set_titles(Row::new(vec![
+        Cell::new("Volume Id"),
+        Cell::new("Instance Id"),
+        Cell::new("Burst Balance [%]"),
+        Cell::new("Estimate Time of 0%"),
+        Cell::new("Estimate Time until 0% [min]"),
+        Cell::new("Timestamp"),
+    ]));
+
     for m in forecasts {
         match m {
             BurstBalance {
                 timestamp: Some(ref timestamp),
                 balance: Some(ref balance),
+                forecast: Some(ref forecast),
                 ..
             } => {
-                println!(
-                    "Burst balance for vol {} attached to instance {} at {} is {}",
-                    &m.volume_id, &m.instance_id, timestamp, balance
-                )
+                let time_left = (*forecast - Utc::now()).num_minutes();
+                let row = Row::new(vec![
+                    Cell::new(&m.volume_id),
+                    Cell::new(&m.instance_id),
+                    Cell::new(&balance.to_string()).style_spec("r"),
+                    Cell::new(&forecast.to_string()),
+                    Cell::new(&time_left.to_string()).style_spec("r"),
+                    Cell::new(&timestamp.to_string()),
+                ]);
+                table.add_row(row);
+            },
+            BurstBalance {
+                timestamp: Some(ref timestamp),
+                balance: Some(ref balance),
+                forecast: None,
+                ..
+            } => {
+                let row = Row::new(vec![
+                    Cell::new(&m.volume_id),
+                    Cell::new(&m.instance_id),
+                    Cell::new(&balance.to_string()).style_spec("r"),
+                    Cell::new("-").style_spec("c"),
+                    Cell::new("-").style_spec("c"),
+                    Cell::new(&timestamp.to_string()),
+                ]);
+                table.add_row(row);
+            },
+            BurstBalance {
+                timestamp: None,
+                balance: None,
+                forecast: None,
+                ..
+            } => {
+                let row = Row::new(vec![
+                    Cell::new(&m.volume_id),
+                    Cell::new(&m.instance_id),
+                    Cell::new("-"),
+                    Cell::new("-"),
+                    Cell::new("-"),
+                    Cell::new("-"),
+                ]);
+                table.add_row(row);
             }
             _ => {
-                println!(
-                    "Burst balance for vol {} attached to instance {} not available",
-                    &m.volume_id, &m.instance_id
-                )
+                eprintln!("Failed to print {:?}.", &m);
             }
         };
-        if let BurstBalance {
-            forecast: Some(ref forecast),
-            ..
-        } = m
-        {
-            let time_left = (*forecast - Utc::now()).num_minutes();
-            println!(
-                "   -> running out of burst balance at {:?} witch is in {:?} min",
-                forecast, &time_left
-            );
-        }
     }
+
+    table.printstd();
 }
