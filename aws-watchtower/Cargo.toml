@@ -19,7 +19,7 @@ name = "aws_watchtower"
 path = "src/lib.rs"
 
 [dependencies]
-aws = { version = "0.0.2", path = "../aws" }
+aws = { version = "0.0.3", path = "../aws" }
 clams = "0.0.13"
 clams-derive = "^0.0.4"
 bosun = { version = "0.0.2", path = "../bosun" }

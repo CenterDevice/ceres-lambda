@@ -19,7 +19,7 @@ fn main() {
 
     let end = Utc::now();
     let start = end - chrono::Duration::minutes(60);
-    let forecasts = get_burst_balance(&aws_client_config, start, end, None).expect("Failed to get burst balances");
+    let forecasts = get_burst_balances(&aws_client_config, start, end, None).expect("Failed to get burst balances");
 
     for m in forecasts {
         match m {

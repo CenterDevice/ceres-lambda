@@ -73,7 +73,7 @@ impl ConvertVolumeIdToQueryId for String {
     fn to_query_id(&self) -> String { self.replace("-", "_") }
 }
 
-pub fn get_burst_balance<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, volume_ids: Vec<String>, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalanceMetricData>, Error> {
+pub fn get_burst_balances<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, volume_ids: Vec<String>, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalanceMetricData>, Error> {
     let period = period.into();
     let period = period.map(|x| x.num_seconds()).unwrap_or(300);
     debug!("Retrieving cloudwatch burst balance for volume ids '{:?}'", &volume_ids);

@@ -6,15 +6,16 @@ build = "build.rs"
 
 edition = "2018"
 
-[[example]]
-name = "get_metrics"
+[[bin]]
+path = "src/bin/get_burst_balances.rs"
+name = "get_burst_balances"
 
 [lib]
 name = "aws_scaletower"
 path = "src/lib.rs"
 
 [dependencies]
-aws = { version = "0.0.2", path = "../aws" }
+aws = { version = "0.0.3", path = "../aws" }
 bosun = { version = "0.0.2", path = "../bosun" }
 chrono = { version = "0.4", features = ["serde"] }
 env_logger = "0.6"

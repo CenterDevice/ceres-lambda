@@ -86,7 +86,7 @@ pub struct BurstBalance {
     pub forecast: Option<DateTime<Utc>>,
 }
 
-pub fn get_burst_balance<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalance>, Error> {
+pub fn get_burst_balances<T: Into<Option<Duration>>>(aws_client_config: &AwsClientConfig, start: DateTime<Utc>, end: DateTime<Utc>, period: T) -> Result<Vec<BurstBalance>, Error> {
     let filters = vec![
         Filter {
             name: Some("instance-state-name".to_string()),
@@ -122,7 +122,7 @@ pub fn get_burst_balance<T: Into<Option<Duration>>>(aws_client_config: &AwsClien
     let vols_instances_map: VolInstanceMap = vol_atts.into();
 
     let vol_ids = vols_instances_map.0.keys().cloned().collect();
-    let metric_data = cloudwatch::get_burst_balance(aws_client_config, vol_ids, start, end, period)?;
+    let metric_data = cloudwatch::get_burst_balances(aws_client_config, vol_ids, start, end, period)?;
     debug!("{:#?}", &metric_data);
 
     let burst_balances = metric_data
