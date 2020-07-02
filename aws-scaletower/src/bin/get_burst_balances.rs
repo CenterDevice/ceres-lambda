@@ -1,6 +1,7 @@
 use aws::{
     auth::{create_provider_with_assuem_role, StsAssumeRoleSessionCredentialsProviderConfig},
     AwsClientConfig,
+    Filter,
 };
 use aws_scaletower::*;
 use chrono::prelude::*;
@@ -54,9 +55,14 @@ fn main() {
         AwsClientConfig::with_credentials_provider_and_region(credential_provider, Region::EuCentral1)
             .expect("Failed to create AWS client config");
 
+    let filters = vec![
+        Filter::new("instance-state-name", vec!["running"]),
+        Filter::new("tag:Name", vec!["centerdevice-ec2-document_server*"])
+    ];
+
     let end = Utc::now();
     let start = end - chrono::Duration::minutes(60);
-    let forecasts = get_burst_balances(&aws_client_config, start, end, None).expect("Failed to get burst balances");
+    let forecasts = get_burst_balances(&aws_client_config, start, end, None, filters).expect("Failed to get burst balances");
 
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
@@ -113,10 +119,10 @@ fn main() {
                 let row = Row::new(vec![
                     Cell::new(&m.volume_id),
                     Cell::new(&m.instance_id),
-                    Cell::new("-"),
-                    Cell::new("-"),
-                    Cell::new("-"),
-                    Cell::new("-"),
+                    Cell::new("-").style_spec("c"),
+                    Cell::new("-").style_spec("c"),
+                    Cell::new("-").style_spec("c"),
+                    Cell::new("-").style_spec("c"),
                 ]);
                 table.add_row(row);
             }

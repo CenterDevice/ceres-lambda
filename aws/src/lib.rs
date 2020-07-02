@@ -41,3 +41,31 @@ impl AwsClientConfig {
         })
     }
 }
+
+pub type Filters = Vec<Filter>;
+
+#[derive(Debug)]
+pub struct Filter {
+    pub name: String,
+    pub values: Vec<String>,
+}
+
+impl Filter {
+    pub fn new<S: Into<String>, T: Into<String>, U: Into<Vec<T>>>(name: S, values: U) -> Filter {
+        let values = values.into().into_iter().map(|x| x.into()).collect();
+        Filter {
+            name: name.into(),
+            values,
+        }
+    }
+}
+
+impl From<Filter> for rusoto_ec2::Filter {
+    fn from(f: Filter) -> Self {
+        rusoto_ec2::Filter {
+            name: Some(f.name),
+            values: Some(f.values),
+        }
+    }
+}
+

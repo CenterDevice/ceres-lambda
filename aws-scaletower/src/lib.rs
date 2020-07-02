@@ -2,9 +2,11 @@ use aws::{
     cloudwatch::{self, BurstBalanceMetricData, Metric},
     ec2::{
         ebs::get_volumes_info,
-        ec2::{get_instances_ids, Filter},
+        ec2::get_instances_ids,
+        ec2::Filter as AwsFilter,
     },
     AwsClientConfig,
+    Filters,
 };
 use chrono::{prelude::*, Duration};
 use failure::Error;
@@ -101,26 +103,20 @@ pub struct BurstBalance {
     pub forecast:    Option<DateTime<Utc>>,
 }
 
-pub fn get_burst_balances<T: Into<Option<Duration>>>(
+pub fn get_burst_balances<S: Into<Option<Duration>>, T: Into<Option<Filters>>>(
     aws_client_config: &AwsClientConfig,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
-    period: T,
+    period: S,
+    filters: T
 ) -> Result<Vec<BurstBalance>, Error> {
-    let filters = vec![
-        Filter {
-            name:   Some("instance-state-name".to_string()),
-            values: Some(vec!["running".to_string()]),
-        },
-        Filter {
-            name:   Some("tag:Name".to_string()),
-            values: Some(vec!["centerdevice-ec2-document_server*".to_string()]),
-        },
-    ];
+
+    let filters: Option<Filters> = filters.into();
+    let filters = filters.map(|x| x.into_iter().map(|f| f.into()).collect());
     let instance_ids = get_instances_ids(aws_client_config, filters)?;
     debug!("{:#?}", &instance_ids);
 
-    let filters = vec![Filter {
+    let filters = vec![AwsFilter {
         name:   Some("attachment.instance-id".to_string()),
         values: Some(instance_ids),
     }];
