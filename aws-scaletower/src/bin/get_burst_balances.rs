@@ -5,14 +5,46 @@ use aws::{
 use aws_scaletower::*;
 use chrono::prelude::*;
 use rusoto_core::Region;
+use std::path::PathBuf;
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "basic")]
+struct Opt {
+    /// AWS CLI credentials file
+    #[structopt(
+        short = "-c",
+        long = "--credentials-file",
+        name = "credentials-file",
+        parse(from_os_str)
+    )]
+    credentials_file: Option<PathBuf>,
+
+    /// AWS CLI credentials profile
+    #[structopt(short = "-p", long = "--profile", name = "profile")]
+    profile: String,
+
+    /// Role ARN
+    #[structopt(short = "-r", long = "--role-arn", name = "role-arn")]
+    role_arn: String,
+}
+
+fn default_credentials_file() -> PathBuf {
+    let mut path = dirs::home_dir().expect("Failed to determine home directory");
+    path.push(".aws");
+    path.push("credentials");
+    path
+}
 
 fn main() {
     env_logger::init();
+    let args = Opt::from_args();
+    let credentials_file = args.credentials_file.unwrap_or_else(|| default_credentials_file());
 
     let sts_config = StsAssumeRoleSessionCredentialsProviderConfig::new(
-        "/Users/lukas/.aws/credentials",
-        "iam_centerdevice_my_person",
-        "arn:aws:iam::737288212407:role/OrganizationAccountAccessRole",
+        credentials_file,
+        args.profile,
+        args.role_arn,
         Region::EuCentral1,
     );
     let credential_provider =
