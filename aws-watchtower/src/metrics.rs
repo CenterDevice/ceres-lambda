@@ -1,6 +1,5 @@
 use bosun::{Bosun, Metadata};
 use failure::Error;
-use lambda;
 
 pub static ASG_UP_DOWN: &str = "aws.ec2.asg.scaling.event";
 pub static EC2_STATE_CHANGE: &str = "aws.ec2.ec2.state_change.event";

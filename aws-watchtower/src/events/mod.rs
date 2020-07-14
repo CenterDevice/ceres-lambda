@@ -5,7 +5,6 @@ use aws::{
 };
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
-use lambda;
 use lambda_runtime::Context;
 use log::debug;
 use serde_derive::{Deserialize, Serialize};

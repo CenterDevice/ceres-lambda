@@ -40,7 +40,7 @@ fn default_credentials_file() -> PathBuf {
 fn main() {
     env_logger::init();
     let args = Opt::from_args();
-    let credentials_file = args.credentials_file.unwrap_or_else(|| default_credentials_file());
+    let credentials_file = args.credentials_file.unwrap_or_else(default_credentials_file);
 
     let sts_config = StsAssumeRoleSessionCredentialsProviderConfig::new(
         credentials_file,
