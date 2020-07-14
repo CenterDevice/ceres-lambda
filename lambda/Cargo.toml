@@ -2,7 +2,6 @@
 name = "lambda"
 version = "0.1.0"
 authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
-build = "build.rs"
 
 edition = "2018"
 
@@ -32,11 +31,4 @@ toml = "0.4"
 chrono = "0.4"
 spectral = "^0.6"
 testing = { version = "0.0.1", path = "../testing" }
-
-[build-dependencies]
-vergen = "3"
-
-# Enable Debug Symbols in Release build
-#[profile.release]
-#debug = true
 

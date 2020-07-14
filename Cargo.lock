@@ -925,7 +925,6 @@ dependencies = [
  "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "testing 0.0.1",
  "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "vergen 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

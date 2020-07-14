@@ -7,6 +7,14 @@ pub mod config;
 pub mod error;
 pub mod metrics;
 
+pub struct FunctionVersion {
+     pub git_commit_sha: &'static str,
+     pub git_commit_date: &'static str,
+     pub git_version: &'static str,
+     pub cargo_version: &'static str,
+     pub build_timestamp: &'static str,
+}
+
 #[derive(Debug, Serialize)]
 pub struct LambdaResult<'a, T> {
     function_name: &'a str,
@@ -26,7 +34,7 @@ impl<'a, T> LambdaResult<'a, T>
 where
     T: serde::Serialize,
 {
-    pub fn from_ctx(ctx: &'a Context, error_msg: Option<String>, details: Option<&'a T>) -> LambdaResult<'a, T> {
+    pub fn from_ctx(ctx: &'a Context, function_version: &FunctionVersion, error_msg: Option<String>, details: Option<&'a T>) -> LambdaResult<'a, T> {
         LambdaResult {
             function_name: &ctx.function_name,
             function_version: &ctx.function_version,
@@ -34,11 +42,11 @@ where
             exit_code: if error_msg.is_none() { 0 } else { 1 },
             error_msg,
             details,
-            git_commit_sha: env!("VERGEN_SHA_SHORT"),
-            git_commit_date: env!("VERGEN_COMMIT_DATE"),
-            git_version: env!("VERGEN_SEMVER_LIGHTWEIGHT"),
-            cargo_version: env!("CARGO_PKG_VERSION"),
-            build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
+            git_commit_sha: function_version.git_commit_sha,
+            git_commit_date: function_version.git_commit_date,
+            git_version: function_version.git_version,
+            cargo_version: function_version.cargo_version,
+            build_timestamp: function_version.build_timestamp,
         }
     }
 
@@ -58,7 +66,7 @@ where
     }
 }
 
-pub fn log_invocation(invocation_counter: usize, ctx: &Context) {
+pub fn log_invocation(invocation_counter: usize, ctx: &Context, function_version: &FunctionVersion) {
     eprintln!(
         "I've been invoked ({}); function={}, lambda version={}, request_id={}, git commit sha={}, git commit \
          date={}, git version={}, cargo version={}, build timestamp={}.",
@@ -66,18 +74,18 @@ pub fn log_invocation(invocation_counter: usize, ctx: &Context) {
         ctx.function_name,
         ctx.function_version,
         ctx.aws_request_id,
-        env!("VERGEN_SHA_SHORT"),
-        env!("VERGEN_COMMIT_DATE"),
-        env!("VERGEN_SEMVER_LIGHTWEIGHT"),
-        env!("CARGO_PKG_VERSION"),
-        env!("VERGEN_BUILD_TIMESTAMP")
+        function_version.git_commit_sha,
+        function_version.git_commit_date,
+        function_version.git_version,
+        function_version.cargo_version,
+        function_version.build_timestamp,
     );
 }
 
-pub fn log_result(res: &Result<impl serde::Serialize, Error>, ctx: &Context) {
+pub fn log_result(res: &Result<impl serde::Serialize, Error>, ctx: &Context, function_version: &FunctionVersion) {
     let lambda_result = match res {
-        Ok(ref details) => LambdaResult::from_ctx(ctx, None, Some(details)),
-        Err(ref e) => LambdaResult::from_ctx(ctx, Some(e.to_string()), None),
+        Ok(ref details) => LambdaResult::from_ctx(ctx, function_version, None, Some(details)),
+        Err(ref e) => LambdaResult::from_ctx(ctx, function_version, Some(e.to_string()), None),
     };
     lambda_result.log_human();
     lambda_result.log_json();
@@ -89,9 +97,16 @@ mod tests {
 
     #[test]
     fn test_log_invocation() {
-        let ctx = Context::default();
         let invocation_counter = 0;
+        let ctx = Context::default();
+        let function_version = FunctionVersion {
+            git_commit_sha: "git_commit_sha",
+            git_commit_date: "git_commit_date",
+            git_version: "git_version",
+            cargo_version: "cargo_version",
+            build_timestamp: "build_timestamp",
+        };
 
-        log_invocation(invocation_counter, &ctx);
+        log_invocation(invocation_counter, &ctx, &function_version);
     }
 }

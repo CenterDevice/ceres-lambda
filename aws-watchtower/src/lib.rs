@@ -1,7 +1,7 @@
 use crate::config::{EncryptedFunctionConfig, FunctionConfig};
 use aws::AwsClientConfig;
 use failure::Error;
-use lambda::{self, config::EncryptedConfig};
+use lambda::{self, config::EncryptedConfig, FunctionVersion};
 use lambda_runtime::{error::HandlerError, Context};
 use log::{debug, info};
 use serde_json::Value;
@@ -12,6 +12,14 @@ pub mod config;
 pub mod error;
 mod events;
 mod metrics;
+
+static FUNCTION_VERSION: lambda::FunctionVersion = FunctionVersion {
+    git_commit_sha: env!("VERGEN_SHA_SHORT"),
+    git_commit_date: env!("VERGEN_COMMIT_DATE"),
+    git_version: env!("VERGEN_SEMVER_LIGHTWEIGHT"),
+    cargo_version: env!("CARGO_PKG_VERSION"),
+    build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
+};
 
 // Use a counter, in case we want to track how often the function gets called before getting cold
 // again.
@@ -30,7 +38,7 @@ pub fn lambda_handler(json: Value, ctx: Context) -> Result<(), HandlerError> {
 
 fn run(json: Value, ctx: &Context) -> Result<(), Error> {
     let invocation_counter = INVOCATION_COUNTER.fetch_add(1, Ordering::SeqCst);
-    lambda::log_invocation(invocation_counter, ctx);
+    lambda::log_invocation(invocation_counter, ctx, &FUNCTION_VERSION);
 
     // Only run once per instance of lambda function
     if invocation_counter == 0 {
@@ -52,7 +60,7 @@ fn run(json: Value, ctx: &Context) -> Result<(), Error> {
     let res = events::handle(&AWS_CLIENT_CONFIG, json, ctx, &CONFIG, &bosun);
     info!("Finished event handling.");
 
-    lambda::log_result(&res, ctx);
+    lambda::log_result(&res, ctx, &FUNCTION_VERSION);
 
     Ok(())
 }
