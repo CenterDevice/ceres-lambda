@@ -1,6 +1,7 @@
 use aws_watchtower::config::EncryptedFunctionConfig;
 
 use aws::AwsClientConfig;
+use lambda::config::EncryptedConfig;
 use clams::config::Config;
 use std::path::PathBuf;
 use structopt::StructOpt;

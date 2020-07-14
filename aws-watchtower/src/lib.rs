@@ -1,8 +1,9 @@
-use crate::{config::FunctionConfig, error::AwsWatchtowerError, lambda::LambdaResult};
+use crate::config::{EncryptedFunctionConfig, FunctionConfig};
 use aws::AwsClientConfig;
 use failure::Error;
 use lambda_runtime::{error::HandlerError, Context};
-use log::info;
+use lambda::{self, config::EncryptedConfig};
+use log::{debug, info};
 use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -10,8 +11,6 @@ mod asg_mapping;
 pub mod config;
 pub mod error;
 mod events;
-mod init;
-mod lambda;
 mod metrics;
 
 // Use a counter, in case we want to track how often the function gets called before getting cold
@@ -21,7 +20,7 @@ static INVOCATION_COUNTER: AtomicUsize = AtomicUsize::new(0);
 lazy_static::lazy_static! {
     static ref AWS_CLIENT_CONFIG: AwsClientConfig = AwsClientConfig::new()
         .expect("Failed to AWS client config.");
-    static ref CONFIG: FunctionConfig = init::config(&AWS_CLIENT_CONFIG)
+    static ref CONFIG: FunctionConfig = EncryptedFunctionConfig::load_from_env(&AWS_CLIENT_CONFIG)
         .expect("Failed to initialize configuration.");
 }
 
@@ -35,32 +34,26 @@ fn run(json: Value, ctx: &Context) -> Result<(), Error> {
 
     // Only run once per instance of lambda function
     if invocation_counter == 0 {
-        init::log();
+        env_logger::init();
+        debug!("Initialized logger.");
         lazy_static::initialize(&CONFIG);
     }
 
     // Run per each invocation
-    let bosun = init::bosun(&CONFIG, ctx).map_err(|e| ctx.new_error(e.to_string().as_str()))?;
+    let bosun = lambda::bosun::init(&CONFIG.bosun, ctx).map_err(|e| ctx.new_error(e.to_string().as_str()))?;
 
     // Only run once per instance of lambda function
     if invocation_counter == 0 {
-        init::bosun_metrics(&bosun).map_err(|e| ctx.new_error(e.to_string().as_str()))?;
+        metrics::send_metadata(&bosun)
+            .map_err(|e| ctx.new_error(e.to_string().as_str()))?;
+        debug!("Initialized bosun metrics.");
     }
     info!("Initialization complete.");
 
     let res = events::handle(&AWS_CLIENT_CONFIG, json, ctx, &CONFIG, &bosun);
     info!("Finished event handling.");
 
-    log_result(&res, ctx);
+    lambda::log_result(&res, ctx);
 
     Ok(())
-}
-
-fn log_result(res: &Result<impl serde::Serialize, Error>, ctx: &Context) {
-    let lambda_result = match res {
-        Ok(ref details) => LambdaResult::from_ctx(ctx, None, Some(details)),
-        Err(ref e) => LambdaResult::from_ctx(ctx, Some(e.to_string()), None),
-    };
-    lambda_result.log_human();
-    lambda_result.log_json();
 }

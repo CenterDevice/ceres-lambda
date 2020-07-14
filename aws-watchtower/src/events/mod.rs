@@ -1,10 +1,11 @@
-use crate::{config::FunctionConfig, error::AwsWatchtowerError, metrics};
+use crate::{config::FunctionConfig, error::AwsWatchtowerError};
 use aws::{
     ec2::{asg::AsgScalingInfo, ebs::VolumeInfo, ec2::Ec2StateInfo},
     AwsClientConfig,
 };
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
+use lambda;
 use lambda_runtime::Context;
 use log::debug;
 use serde_derive::{Deserialize, Serialize};
@@ -49,18 +50,18 @@ pub fn handle<T: Bosun>(
     bosun: &T,
 ) -> Result<HandleResult, Error> {
     let tags = Tags::new();
-    let datum = Datum::now(metrics::LAMBDA_INVOCATION_COUNT, "1", &tags);
+    let datum = Datum::now(lambda::metrics::LAMBDA_INVOCATION_COUNT, "1", &tags);
     bosun.emit_datum(&datum)?;
 
     let res = parse_event(json).and_then(|event| handle_event(aws_client_config, event, ctx, &config, bosun));
 
     match res {
         Ok(_) => {
-            let datum = Datum::now(metrics::LAMBDA_INVOCATION_RESULT, "0", &tags);
+            let datum = Datum::now(lambda::metrics::LAMBDA_INVOCATION_RESULT, "0", &tags);
             bosun.emit_datum(&datum)?
         }
         Err(_) => {
-            let datum = Datum::now(metrics::LAMBDA_INVOCATION_RESULT, "1", &tags);
+            let datum = Datum::now(lambda::metrics::LAMBDA_INVOCATION_RESULT, "1", &tags);
             bosun.emit_datum(&datum)?
         }
     }

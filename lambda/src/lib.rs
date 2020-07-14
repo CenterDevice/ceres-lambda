@@ -1,5 +1,11 @@
+use failure::Error;
 use lambda_runtime::Context;
 use serde_derive::Serialize;
+
+pub mod bosun;
+pub mod config;
+pub mod error;
+pub mod metrics;
 
 #[derive(Debug, Serialize)]
 pub struct LambdaResult<'a, T> {
@@ -17,8 +23,8 @@ pub struct LambdaResult<'a, T> {
 }
 
 impl<'a, T> LambdaResult<'a, T>
-where
-    T: serde::Serialize,
+    where
+        T: serde::Serialize,
 {
     pub fn from_ctx(ctx: &'a Context, error_msg: Option<String>, details: Option<&'a T>) -> LambdaResult<'a, T> {
         LambdaResult {
@@ -66,6 +72,15 @@ pub fn log_invocation(invocation_counter: usize, ctx: &Context) {
         env!("CARGO_PKG_VERSION"),
         env!("VERGEN_BUILD_TIMESTAMP")
     );
+}
+
+pub fn log_result(res: &Result<impl serde::Serialize, Error>, ctx: &Context) {
+    let lambda_result = match res {
+        Ok(ref details) => LambdaResult::from_ctx(ctx, None, Some(details)),
+        Err(ref e) => LambdaResult::from_ctx(ctx, Some(e.to_string()), None),
+    };
+    lambda_result.log_human();
+    lambda_result.log_json();
 }
 
 #[cfg(test)]

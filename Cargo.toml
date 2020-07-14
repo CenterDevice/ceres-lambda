@@ -4,6 +4,7 @@ members = [
   "aws-scaletower",
   "aws-watchtower",
   "bosun",
+  "lambda",
   "testing",
 ]
 

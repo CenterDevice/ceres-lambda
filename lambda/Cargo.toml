@@ -1,21 +1,13 @@
 [package]
-name = "aws-watchtower"
-version = "0.2.6"
+name = "lambda"
+version = "0.1.0"
 authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
 build = "build.rs"
 
 edition = "2018"
 
-[[bin]]
-name = "aws-watchtower"
-path = "src/bin/aws-watchtower.rs"
-
-[[bin]]
-name = "validate-config"
-path = "src/bin/validate-config.rs"
-
 [lib]
-name = "aws_watchtower"
+name = "lambda"
 path = "src/lib.rs"
 
 [dependencies]
@@ -27,7 +19,6 @@ env_logger = "0.6"
 failure = "0.1"
 failure_derive = "0.1"
 lambda_runtime = "0.1"
-lambda = { version = "0.1.0", path = "../lambda" }
 lazy_static = "1.2"
 log = "0.4"
 reqwest = "0.9"

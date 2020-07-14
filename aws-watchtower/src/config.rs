@@ -1,23 +1,27 @@
-use crate::{asg_mapping::Mappings, AwsWatchtowerError};
-use aws::{kms, AwsClientConfig};
+use std::collections::HashMap;
+
 use clams::config::*;
 use clams_derive::Config;
-use failure::{Error, Fail};
+use failure::Error;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use aws::{AwsClientConfig, kms};
+use lambda::config::{BosunConfig, EncryptedConfig};
+
+use crate::asg_mapping::Mappings;
 
 #[derive(Config, PartialEq, Deserialize, Serialize, Debug)]
 pub struct EncryptedFunctionConfig {
-    pub bosun: Bosun,
-    pub asg:   Asg,
-    pub ec2:   Ec2,
+    pub bosun: BosunConfig,
+    pub asg: Asg,
+    pub ec2: Ec2,
 }
 
-impl EncryptedFunctionConfig {
-    pub fn decrypt(self, aws_client_config: &AwsClientConfig) -> Result<FunctionConfig, Error> {
+impl EncryptedConfig<EncryptedFunctionConfig, FunctionConfig> for EncryptedFunctionConfig {
+    fn decrypt(self, aws_client_config: &AwsClientConfig) -> Result<FunctionConfig, Error> {
         let bosun_auth_password = kms::decrypt_base64(aws_client_config, &self.bosun.password)?;
 
-        let bosun = Bosun {
+        let bosun = BosunConfig {
             password: bosun_auth_password,
             ..self.bosun
         };
@@ -33,18 +37,9 @@ impl EncryptedFunctionConfig {
 }
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
-pub struct Bosun {
-    pub host:     String,
-    pub user:     String,
-    pub password: String,
-    pub timeout:  Option<u64>,
-    pub tags:     HashMap<String, String>,
-}
-
-#[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct Asg {
     pub scaledown_silence_duration: String,
-    pub mappings:                   Mappings,
+    pub mappings: Mappings,
 }
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
@@ -54,24 +49,26 @@ pub struct Ec2 {
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct FunctionConfig {
-    pub bosun: Bosun,
-    pub asg:   Asg,
-    pub ec2:   Ec2,
+    pub bosun: BosunConfig,
+    pub asg: Asg,
+    pub ec2: Ec2,
 }
+
+impl FunctionConfig {}
 
 impl Default for FunctionConfig {
     fn default() -> Self {
-        let bosun = Bosun {
-            host:     "localhost:8070".to_string(),
-            user:     "bosun".to_string(),
+        let bosun = BosunConfig {
+            host: "localhost:8070".to_string(),
+            user: "bosun".to_string(),
             password: "bosun".to_string(),
-            timeout:  Some(5),
-            tags:     HashMap::new(),
+            timeout: Some(5),
+            tags: HashMap::new(),
         };
 
         let asg = Asg {
             scaledown_silence_duration: "24h".to_string(),
-            mappings:                   Mappings { items: Vec::new() },
+            mappings: Mappings { items: Vec::new() },
         };
 
         let ec2 = Ec2 {
@@ -82,36 +79,13 @@ impl Default for FunctionConfig {
     }
 }
 
-#[derive(Debug)]
-pub struct EnvConfig {
-    pub config_file: String,
-}
-
-impl EnvConfig {
-    pub fn from_env() -> Result<Self, Error> {
-        let config_file = std::env::var("CD_CONFIG_FILE")
-            .map_err(|e| e.context(AwsWatchtowerError::FailedEnvVar("CD_CONFIG_FILE")))?;
-
-        let env_config = EnvConfig { config_file };
-
-        Ok(env_config)
-    }
-}
-
-impl Default for EnvConfig {
-    fn default() -> Self {
-        EnvConfig {
-            config_file: "".to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use spectral::prelude::*;
+
     use crate::asg_mapping::Mapping;
 
-    use spectral::prelude::*;
+    use super::*;
 
     #[test]
     fn deserialize_function_config() {
@@ -147,13 +121,13 @@ scaledown_silence_duration = "15m"
         let asg_mappings = Mappings {
             items: vec![
                 Mapping {
-                    search:      "webserver".to_string(),
-                    tag_name:    "webserver".to_string(),
+                    search: "webserver".to_string(),
+                    tag_name: "webserver".to_string(),
                     host_prefix: "webserver-".to_string(),
                 },
                 Mapping {
-                    search:      "import".to_string(),
-                    tag_name:    "import".to_string(),
+                    search: "import".to_string(),
+                    tag_name: "import".to_string(),
                     host_prefix: "import-".to_string(),
                 },
             ],
