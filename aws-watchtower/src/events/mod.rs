@@ -149,8 +149,8 @@ mod tests {
         let mut config = FunctionConfig::default();
         config.asg.mappings = Mappings {
             items: vec![Mapping {
-                search:      "my".to_string(),
-                tag_name:    "my".to_string(),
+                search: "my".to_string(),
+                tag_name: "my".to_string(),
                 host_prefix: "my-server-".to_string(),
             }],
         };

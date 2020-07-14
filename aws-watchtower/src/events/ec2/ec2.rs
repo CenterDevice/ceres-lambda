@@ -31,23 +31,23 @@ use std::{
 // }
 #[derive(Debug, Deserialize)]
 pub struct Ec2StateChangeEvent {
-    pub id:        String,
+    pub id: String,
     // These fields do not exist, because serde used both of them to "route" the deserialization to this point.
     // #[serde(rename = "detail-type")]
     // pub detail_type: String,
     // pub source: String,
-    pub account:   String,
-    pub time:      String,
-    pub region:    String,
+    pub account: String,
+    pub time: String,
+    pub region: String,
     pub resources: Vec<String>,
-    pub detail:    Ec2StateChangeDetail,
+    pub detail: Ec2StateChangeDetail,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Ec2StateChangeDetail {
     #[serde(rename = "instance-id")]
     pub instance_id: String,
-    pub state:       Ec2State,
+    pub state: Ec2State,
 }
 
 lazy_static::lazy_static! {
@@ -159,7 +159,7 @@ pub fn handle<T: Bosun>(
 
     let ec2_state_info = Ec2StateInfo {
         ec2_instance_id: state_change.detail.instance_id,
-        state:           state_change.detail.state,
+        state: state_change.detail.state,
     };
 
     Ok(HandleResult::Ec2StateInfo { ec2_state_info })
@@ -182,7 +182,9 @@ mod tests {
     use serde_json::json;
     use spectral::prelude::*;
 
-    fn setup() { testing::setup(); }
+    fn setup() {
+        testing::setup();
+    }
 
     #[test]
     fn parse_pending_ec2_state_change_event_from_json() {

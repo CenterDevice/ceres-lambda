@@ -2,15 +2,9 @@ use failure::Error;
 use futures::future::Future;
 use rusoto_core::{
     credential::{
-        AutoRefreshingProvider,
-        AwsCredentials,
-        ChainProvider,
-        CredentialsError,
-        ProfileProvider,
-        ProvideAwsCredentials,
+        AutoRefreshingProvider, AwsCredentials, ChainProvider, CredentialsError, ProfileProvider, ProvideAwsCredentials,
     },
-    HttpClient,
-    Region,
+    HttpClient, Region,
 };
 use rusoto_sts::{StsAssumeRoleSessionCredentialsProvider, StsClient};
 use std::{path::PathBuf, time::Duration};
@@ -33,9 +27,9 @@ pub fn create_provider_with_assuem_role(
 
 pub struct StsAssumeRoleSessionCredentialsProviderConfig {
     credentials_path: PathBuf,
-    profile_name:     String,
-    role_arn:         String,
-    region:           Region,
+    profile_name: String,
+    role_arn: String,
+    region: Region,
 }
 
 impl StsAssumeRoleSessionCredentialsProviderConfig {
@@ -47,15 +41,15 @@ impl StsAssumeRoleSessionCredentialsProviderConfig {
     ) -> StsAssumeRoleSessionCredentialsProviderConfig {
         StsAssumeRoleSessionCredentialsProviderConfig {
             credentials_path: credentials_path.into(),
-            profile_name:     profile_name.into(),
-            role_arn:         role_arn.into(),
-            region:           region.into(),
+            profile_name: profile_name.into(),
+            role_arn: role_arn.into(),
+            region: region.into(),
         }
     }
 }
 
 pub struct CeresAwsCredentialProvider {
-    sts:   Option<StsAssumeRoleSessionCredentialsProvider>,
+    sts: Option<StsAssumeRoleSessionCredentialsProvider>,
     chain: ChainProvider,
 }
 

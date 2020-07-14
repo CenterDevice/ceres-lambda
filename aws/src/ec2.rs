@@ -7,14 +7,14 @@ pub mod asg {
 
     #[derive(Debug, Serialize)]
     pub struct AsgScalingInfo {
-        pub ec2_instance_id:         String,
+        pub ec2_instance_id: String,
         pub auto_scaling_group_name: String,
-        pub auto_scaling_event:      String,
+        pub auto_scaling_event: String,
     }
 
     #[derive(Debug, Serialize)]
     pub struct AsgInfo {
-        pub ec2_instance_id:         String,
+        pub ec2_instance_id: String,
         pub auto_scaling_group_name: String,
     }
 
@@ -43,11 +43,9 @@ pub mod asg {
             .next();
         debug!("Successfully retrieved autoscaling information.");
 
-        let asg_info = first_asg.map(|details| {
-            AsgInfo {
-                ec2_instance_id:         instance_id,
-                auto_scaling_group_name: details.auto_scaling_group_name,
-            }
+        let asg_info = first_asg.map(|details| AsgInfo {
+            ec2_instance_id: instance_id,
+            auto_scaling_group_name: details.auto_scaling_group_name,
         });
         debug!("Parsed autoscaling information: '{:?}'", asg_info);
 
@@ -65,11 +63,11 @@ pub mod ebs {
 
     #[derive(Debug, Serialize)]
     pub struct VolumeInfo {
-        pub volume_id:   String,
+        pub volume_id: String,
         pub create_time: String,
-        pub state:       String,
-        pub kms_key_id:  Option<String>,
-        pub encrypted:   bool,
+        pub state: String,
+        pub kms_key_id: Option<String>,
+        pub encrypted: bool,
         pub attachments: Vec<Attachment>,
     }
 
@@ -106,8 +104,8 @@ pub mod ebs {
 
     #[derive(Debug, Serialize)]
     pub struct Attachment {
-        pub volume_id:   String,
-        pub state:       String,
+        pub volume_id: String,
+        pub state: String,
         pub instance_id: Option<String>,
     }
 
@@ -121,18 +119,14 @@ pub mod ebs {
                     state: Some(state),
                     instance_id,
                     ..
-                } => {
-                    Ok(Attachment {
-                        volume_id,
-                        state,
-                        instance_id,
-                    })
-                }
-                _ => {
-                    Err(AwsError::GeneralError(
-                        "volume attachment information result is incomplete",
-                    ))
-                }
+                } => Ok(Attachment {
+                    volume_id,
+                    state,
+                    instance_id,
+                }),
+                _ => Err(AwsError::GeneralError(
+                    "volume attachment information result is incomplete",
+                )),
             }
         }
     }
@@ -253,12 +247,12 @@ pub mod ec2 {
     #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, Copy)]
     #[serde(rename_all = "kebab-case")]
     pub enum Ec2State {
-        Pending      = 1,
-        Running      = 2,
+        Pending = 1,
+        Running = 2,
         ShuttingDown = 3,
-        Stopping     = 4,
-        Stopped      = 5,
-        Terminated   = 6,
+        Stopping = 4,
+        Stopped = 5,
+        Terminated = 6,
     }
 
     impl Ec2State {
@@ -269,13 +263,15 @@ pub mod ec2 {
             }
         }
 
-        pub fn is_going_down(&self) -> bool { !self.is_coming_up() }
+        pub fn is_going_down(&self) -> bool {
+            !self.is_coming_up()
+        }
     }
 
     #[derive(Debug, Serialize)]
     pub struct Ec2StateInfo {
         pub ec2_instance_id: String,
-        pub state:           Ec2State,
+        pub state: Ec2State,
     }
 
     pub fn get_instances_ids<T: Into<Option<Vec<Filter>>>>(
@@ -303,7 +299,7 @@ pub mod ec2 {
             .map(|x| x.instances) // https://docs.rs/rusoto_ec2/0.36.0/rusoto_ec2/struct.Reservation.html
             .flatten() // Option
             .flatten() // Vecs of Instance, https://docs.rs/rusoto_ec2/0.36.0/rusoto_ec2/struct.Instance.html
-            .map(|x| x.instance_id)  // Option
+            .map(|x| x.instance_id) // Option
             .flatten()
             .collect();
         debug!("Successfully retrieved ec2 instance ids: '{:?}'", instance_ids);

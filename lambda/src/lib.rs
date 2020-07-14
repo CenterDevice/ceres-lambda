@@ -9,22 +9,22 @@ pub mod metrics;
 
 #[derive(Debug, Serialize)]
 pub struct LambdaResult<'a, T> {
-    function_name:    &'a str,
+    function_name: &'a str,
     function_version: &'a str,
-    aws_request_id:   &'a str,
-    exit_code:        usize,
-    error_msg:        Option<String>,
-    details:          Option<&'a T>,
-    git_commit_sha:   &'a str,
-    git_commit_date:  &'a str,
-    git_version:      &'a str,
-    cargo_version:    &'a str,
-    build_timestamp:  &'a str,
+    aws_request_id: &'a str,
+    exit_code: usize,
+    error_msg: Option<String>,
+    details: Option<&'a T>,
+    git_commit_sha: &'a str,
+    git_commit_date: &'a str,
+    git_version: &'a str,
+    cargo_version: &'a str,
+    build_timestamp: &'a str,
 }
 
 impl<'a, T> LambdaResult<'a, T>
-    where
-        T: serde::Serialize,
+where
+    T: serde::Serialize,
 {
     pub fn from_ctx(ctx: &'a Context, error_msg: Option<String>, details: Option<&'a T>) -> LambdaResult<'a, T> {
         LambdaResult {

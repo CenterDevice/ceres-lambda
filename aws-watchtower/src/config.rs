@@ -5,7 +5,7 @@ use clams_derive::Config;
 use failure::Error;
 use serde_derive::{Deserialize, Serialize};
 
-use aws::{AwsClientConfig, kms};
+use aws::{kms, AwsClientConfig};
 use lambda::config::{BosunConfig, EncryptedConfig};
 
 use crate::asg_mapping::Mappings;

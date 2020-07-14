@@ -1,12 +1,7 @@
 use aws::{
     cloudwatch::{self, BurstBalanceMetricData, Metric},
-    ec2::{
-        ebs::get_volumes_info,
-        ec2::get_instances_ids,
-        ec2::Filter as AwsFilter,
-    },
-    AwsClientConfig,
-    Filters,
+    ec2::{ebs::get_volumes_info, ec2::get_instances_ids, ec2::Filter as AwsFilter},
+    AwsClientConfig, Filters,
 };
 use chrono::{prelude::*, Duration};
 use failure::Error;
@@ -16,7 +11,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 struct VolumeAttachment {
     pub instance_id: String,
-    pub volume_id:   String,
+    pub volume_id: String,
 }
 
 trait LastMetric {
@@ -24,7 +19,9 @@ trait LastMetric {
 }
 
 impl LastMetric for BurstBalanceMetricData {
-    fn get_last_metric(&self) -> Option<&Metric> { self.metrics.last() }
+    fn get_last_metric(&self) -> Option<&Metric> {
+        self.metrics.last()
+    }
 }
 
 struct VolInstanceMap(HashMap<String, String>);
@@ -59,7 +56,7 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
                 // computed.
                 trace!("No forecast computed for vol {}.", self.volume_id);
                 return None;
-            },
+            }
             Ok((slope, intercept)) => {
                 trace!(
                     "Linear regression result for vol {} and {} metric data points: intercept={}, slope={}.",
@@ -69,7 +66,7 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
                     slope
                 );
                 (slope, intercept)
-            },
+            }
             Err(err) => {
                 trace!(
                     "Linear regression for vol {} and {} metric data points failed, because {}",
@@ -96,11 +93,11 @@ impl RunningOutOfBurstsForecast for BurstBalanceMetricData {
 
 #[derive(Debug)]
 pub struct BurstBalance {
-    pub volume_id:   String,
+    pub volume_id: String,
     pub instance_id: String,
-    pub timestamp:   Option<DateTime<Utc>>,
-    pub balance:     Option<f64>,
-    pub forecast:    Option<DateTime<Utc>>,
+    pub timestamp: Option<DateTime<Utc>>,
+    pub balance: Option<f64>,
+    pub forecast: Option<DateTime<Utc>>,
 }
 
 pub fn get_burst_balances<S: Into<Option<Duration>>, T: Into<Option<Filters>>>(
@@ -108,16 +105,15 @@ pub fn get_burst_balances<S: Into<Option<Duration>>, T: Into<Option<Filters>>>(
     start: DateTime<Utc>,
     end: DateTime<Utc>,
     period: S,
-    filters: T
+    filters: T,
 ) -> Result<Vec<BurstBalance>, Error> {
-
     let filters: Option<Filters> = filters.into();
     let filters = filters.map(|x| x.into_iter().map(|f| f.into()).collect());
     let instance_ids = get_instances_ids(aws_client_config, filters)?;
     debug!("{:#?}", &instance_ids);
 
     let filters = vec![AwsFilter {
-        name:   Some("attachment.instance-id".to_string()),
+        name: Some("attachment.instance-id".to_string()),
         values: Some(instance_ids),
     }];
     let volume_infos = get_volumes_info(aws_client_config, filters)?;
@@ -128,7 +124,7 @@ pub fn get_burst_balances<S: Into<Option<Duration>>, T: Into<Option<Filters>>>(
         .filter(|x| x.attachments.len() == 1) // Semantically possible, but we can only have 1 attachment, because we queried them via instance ids,
         .map(|x| VolumeAttachment {
             instance_id: x.attachments.into_iter().next().unwrap().instance_id.unwrap(), // Safe, due to filter
-            volume_id: x.volume_id
+            volume_id: x.volume_id,
         })
         .collect();
     debug!("{:#?}", &vol_atts);

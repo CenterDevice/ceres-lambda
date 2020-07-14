@@ -29,12 +29,12 @@ pub type Tags = HashMap<String, String>;
 #[derive(Debug)]
 pub struct BosunClient {
     /// `<HOSTNAME|IP ADDR>:<PORT>`
-    pub host:         String,
+    pub host: String,
     /// Timeout for http request connection
-    pub timeout:      u64,
+    pub timeout: u64,
     pub default_tags: Tags,
-    pub username:     Option<String>,
-    pub password:     Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }
 
 pub trait Bosun {
@@ -120,7 +120,9 @@ impl Bosun for BosunClient {
 
 impl BosunClient {
     /// Creates a new BosunClient.
-    pub fn new(host: &str, timeout: u64) -> BosunClient { Self::with_tags(host, timeout, Tags::new()) }
+    pub fn new(host: &str, timeout: u64) -> BosunClient {
+        Self::with_tags(host, timeout, Tags::new())
+    }
 
     /// Creates a new BosunClient with default tags
     pub fn with_tags(host: &str, timeout: u64, default_tags: Tags) -> BosunClient {
@@ -143,11 +145,11 @@ impl BosunClient {
 /// Represents metric meta data.
 pub struct Metadata<'a> {
     /// Metric name
-    pub metric:      &'a str,
+    pub metric: &'a str,
     /// Metric rate type: [gauge, counter rate]
-    pub rate:        &'a str,
+    pub rate: &'a str,
     /// Metric unit
-    pub unit:        &'a str,
+    pub unit: &'a str,
     /// Metric description
     pub description: &'a str,
 }
@@ -189,13 +191,13 @@ impl<'a> Metadata<'a> {
 #[derive(Debug, Serialize)]
 pub struct Datum<'a> {
     /// Metric name
-    pub metric:    &'a str,
+    pub metric: &'a str,
     /// Unix timestamp in either _s_ or _ms_
     pub timestamp: i64,
     /// Value as string representation
-    pub value:     &'a str,
+    pub value: &'a str,
     /// Tags for this metric datum
-    pub tags:      &'a Tags,
+    pub tags: &'a Tags,
 }
 
 impl<'a> Datum<'a> {
@@ -251,13 +253,13 @@ pub fn now_in_ms() -> i64 {
 #[derive(Debug, Serialize)]
 struct InternalDatum<'a> {
     /// Metric name
-    pub metric:    &'a str,
+    pub metric: &'a str,
     /// Unix timestamp in either _s_ or _ms_
     pub timestamp: i64,
     /// Value as string representation
-    pub value:     &'a str,
+    pub value: &'a str,
     /// Tags for this metric datum
-    pub tags:      HashMap<&'a str, &'a str>,
+    pub tags: HashMap<&'a str, &'a str>,
 }
 
 impl<'a> From<&'a Datum<'a>> for InternalDatum<'a> {
@@ -305,13 +307,13 @@ impl<'a> InternalDatum<'a> {
 // terminated by ASG."}
 pub struct Silence {
     duration: String,
-    tags:     String,
+    tags: String,
     /// Bosun does not like bool, only Strings "true" or "false"
-    forget:   String,
-    user:     String,
-    message:  String,
+    forget: String,
+    user: String,
+    message: String,
     /// Bosun does not like bool, only Strings "true" or "false"
-    confirm:  String,
+    confirm: String,
 }
 
 impl Silence {
@@ -319,11 +321,11 @@ impl Silence {
         Silence {
             // TODO: These parameters should be config parameters
             duration: duration.to_string(),
-            tags:     format!("host={}", host),
-            forget:   "true".to_string(),
-            user:     "kevin.lambda".to_string(),
-            message:  "Host has been terminated by ASG.".to_string(),
-            confirm:  "true".to_string(),
+            tags: format!("host={}", host),
+            forget: "true".to_string(),
+            user: "kevin.lambda".to_string(),
+            message: "Host has been terminated by ASG.".to_string(),
+            confirm: "true".to_string(),
         }
     }
 }
@@ -370,13 +372,15 @@ pub mod testing {
             Ok(())
         }
 
-        fn send_to_bosun_api(&self, _: &str, _: &str, _: StatusCode) -> BosunResult { Ok(()) }
+        fn send_to_bosun_api(&self, _: &str, _: &str, _: StatusCode) -> BosunResult {
+            Ok(())
+        }
     }
 
     #[derive(PartialEq, Eq, Debug)]
     pub struct BosunCallStats {
-        pub metadata_count:    u32,
-        pub datum_count:       u32,
+        pub metadata_count: u32,
+        pub datum_count: u32,
         pub set_silence_count: u32,
     }
 
@@ -395,8 +399,8 @@ pub mod testing {
             let stats = self.stats.borrow_mut();
 
             BosunCallStats {
-                metadata_count:    *stats.get("metadata").unwrap_or(&0),
-                datum_count:       *stats.get("datum").unwrap_or(&0),
+                metadata_count: *stats.get("metadata").unwrap_or(&0),
+                datum_count: *stats.get("datum").unwrap_or(&0),
                 set_silence_count: *stats.get("set_silence").unwrap_or(&0),
             }
         }

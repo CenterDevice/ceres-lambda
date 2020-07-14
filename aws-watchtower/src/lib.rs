@@ -1,8 +1,8 @@
 use crate::config::{EncryptedFunctionConfig, FunctionConfig};
 use aws::AwsClientConfig;
 use failure::Error;
-use lambda_runtime::{error::HandlerError, Context};
 use lambda::{self, config::EncryptedConfig};
+use lambda_runtime::{error::HandlerError, Context};
 use log::{debug, info};
 use serde_json::Value;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -44,8 +44,7 @@ fn run(json: Value, ctx: &Context) -> Result<(), Error> {
 
     // Only run once per instance of lambda function
     if invocation_counter == 0 {
-        metrics::send_metadata(&bosun)
-            .map_err(|e| ctx.new_error(e.to_string().as_str()))?;
+        metrics::send_metadata(&bosun).map_err(|e| ctx.new_error(e.to_string().as_str()))?;
         debug!("Initialized bosun metrics.");
     }
     info!("Initialization complete.");

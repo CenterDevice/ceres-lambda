@@ -1,11 +1,10 @@
 use aws::{
     auth::{create_provider_with_assuem_role, StsAssumeRoleSessionCredentialsProviderConfig},
-    AwsClientConfig,
-    Filter,
+    AwsClientConfig, Filter,
 };
 use aws_scaletower::*;
 use chrono::prelude::*;
-use prettytable::{format, Table, Row, Cell};
+use prettytable::{format, Cell, Row, Table};
 use rusoto_core::Region;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -57,12 +56,13 @@ fn main() {
 
     let filters = vec![
         Filter::new("instance-state-name", vec!["running"]),
-        Filter::new("tag:Name", vec!["centerdevice-ec2-document_server*"])
+        Filter::new("tag:Name", vec!["centerdevice-ec2-document_server*"]),
     ];
 
     let end = Utc::now();
     let start = end - chrono::Duration::minutes(60);
-    let forecasts = get_burst_balances(&aws_client_config, start, end, None, filters).expect("Failed to get burst balances");
+    let forecasts =
+        get_burst_balances(&aws_client_config, start, end, None, filters).expect("Failed to get burst balances");
 
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
@@ -93,7 +93,7 @@ fn main() {
                     Cell::new(&timestamp.to_string()),
                 ]);
                 table.add_row(row);
-            },
+            }
             BurstBalance {
                 timestamp: Some(ref timestamp),
                 balance: Some(ref balance),
@@ -109,7 +109,7 @@ fn main() {
                     Cell::new(&timestamp.to_string()),
                 ]);
                 table.add_row(row);
-            },
+            }
             BurstBalance {
                 timestamp: None,
                 balance: None,

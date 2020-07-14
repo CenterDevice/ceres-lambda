@@ -5,8 +5,8 @@ use failure::{Error, Fail};
 use log::debug;
 use serde_derive::{Deserialize, Serialize};
 
-use aws::AwsClientConfig;
 use crate::error::LambdaError;
+use aws::AwsClientConfig;
 
 #[derive(Debug)]
 pub struct EnvConfig {
@@ -15,8 +15,8 @@ pub struct EnvConfig {
 
 impl EnvConfig {
     pub fn from_env() -> Result<Self, Error> {
-        let config_file = std::env::var("CD_CONFIG_FILE")
-            .map_err(|e| e.context(LambdaError::FailedEnvVar("CD_CONFIG_FILE")))?;
+        let config_file =
+            std::env::var("CD_CONFIG_FILE").map_err(|e| e.context(LambdaError::FailedEnvVar("CD_CONFIG_FILE")))?;
 
         let env_config = EnvConfig { config_file };
 
@@ -32,7 +32,7 @@ impl Default for EnvConfig {
     }
 }
 
-pub trait EncryptedConfig<T: EncryptedConfig<T, S>, S>: Config<ConfigStruct=T> {
+pub trait EncryptedConfig<T: EncryptedConfig<T, S>, S>: Config<ConfigStruct = T> {
     fn decrypt(self, aws_client_config: &AwsClientConfig) -> Result<S, Error>;
 
     fn load_from_env(aws_client_config: &AwsClientConfig) -> Result<S, Error> {

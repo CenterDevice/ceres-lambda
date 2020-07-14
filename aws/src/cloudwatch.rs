@@ -3,13 +3,7 @@ use chrono::{prelude::*, Duration};
 use failure::Error;
 use log::debug;
 use rusoto_cloudwatch::{
-    CloudWatch,
-    CloudWatchClient,
-    Dimension,
-    GetMetricDataInput,
-    Metric as RusotoMetric,
-    MetricDataQuery,
-    MetricStat,
+    CloudWatch, CloudWatchClient, Dimension, GetMetricDataInput, Metric as RusotoMetric, MetricDataQuery, MetricStat,
 };
 use serde_derive::Serialize;
 use std::convert::{TryFrom, TryInto};
@@ -17,7 +11,7 @@ use std::convert::{TryFrom, TryInto};
 #[derive(Debug, Serialize)]
 pub struct BurstBalanceMetricData {
     pub volume_id: String,
-    pub metrics:   Vec<Metric>,
+    pub metrics: Vec<Metric>,
 }
 
 impl TryFrom<rusoto_cloudwatch::MetricDataResult> for BurstBalanceMetricData {
@@ -52,7 +46,7 @@ impl TryFrom<rusoto_cloudwatch::MetricDataResult> for BurstBalanceMetricData {
 #[derive(Debug, Serialize)]
 pub struct Metric {
     pub timestamp: DateTime<Utc>,
-    pub value:     f64,
+    pub value: f64,
 }
 
 impl TryFrom<(String, f64)> for Metric {
@@ -71,9 +65,13 @@ trait ConvertVolumeIdToQueryId {
 }
 
 impl ConvertVolumeIdToQueryId for String {
-    fn to_volume_id(&self) -> String { self.replace("_", "-") }
+    fn to_volume_id(&self) -> String {
+        self.replace("_", "-")
+    }
 
-    fn to_query_id(&self) -> String { self.replace("-", "_") }
+    fn to_query_id(&self) -> String {
+        self.replace("-", "_")
+    }
 }
 
 pub fn get_burst_balances<T: Into<Option<Duration>>>(
@@ -93,25 +91,23 @@ pub fn get_burst_balances<T: Into<Option<Duration>>>(
 
     let metric_data_queries: Vec<_> = volume_ids
         .into_iter()
-        .map(|x| {
-            MetricDataQuery {
-                id: x.to_query_id(),
-                metric_stat: Some(MetricStat {
-                    metric: RusotoMetric {
-                        namespace:   Some("AWS/EBS".to_string()),
-                        metric_name: Some("BurstBalance".to_string()),
-                        dimensions:  Some(vec![Dimension {
-                            name:  "VolumeId".to_string(),
-                            value: x,
-                        }]),
-                    },
-                    period,
-                    stat: "Minimum".to_string(),
-                    unit: Some("Percent".to_string()),
-                }),
-                return_data: Some(true),
-                ..Default::default()
-            }
+        .map(|x| MetricDataQuery {
+            id: x.to_query_id(),
+            metric_stat: Some(MetricStat {
+                metric: RusotoMetric {
+                    namespace: Some("AWS/EBS".to_string()),
+                    metric_name: Some("BurstBalance".to_string()),
+                    dimensions: Some(vec![Dimension {
+                        name: "VolumeId".to_string(),
+                        value: x,
+                    }]),
+                },
+                period,
+                stat: "Minimum".to_string(),
+                unit: Some("Percent".to_string()),
+            }),
+            return_data: Some(true),
+            ..Default::default()
         })
         .collect();
 

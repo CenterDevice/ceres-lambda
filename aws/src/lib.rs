@@ -17,8 +17,8 @@ pub type CredentialsProvider = AutoRefreshingProvider<auth::CeresAwsCredentialPr
 
 pub struct AwsClientConfig {
     credentials_provider: Arc<CredentialsProvider>,
-    http_client:          Arc<HttpClient>,
-    region:               Region,
+    http_client: Arc<HttpClient>,
+    region: Region,
 }
 
 impl AwsClientConfig {
@@ -68,4 +68,3 @@ impl From<Filter> for rusoto_ec2::Filter {
         }
     }
 }
-

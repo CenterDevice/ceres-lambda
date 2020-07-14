@@ -24,9 +24,9 @@ fn do_decrypt_base64(aws_client_config: &AwsClientConfig, base64_str: &str) -> R
     let http_client = aws_client_config.http_client.clone();
     let kms = KmsClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
     let decrypt_request = DecryptRequest {
-        ciphertext_blob:    blob,
+        ciphertext_blob: blob,
         encryption_context: None,
-        grant_tokens:       None,
+        grant_tokens: None,
     };
     let res = kms.decrypt(decrypt_request).sync();
     debug!("Finished decrypting base64 str; success={}.", res.is_ok());

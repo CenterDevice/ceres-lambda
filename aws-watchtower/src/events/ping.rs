@@ -25,7 +25,9 @@ mod tests {
     use serde_json::json;
     use spectral::prelude::*;
 
-    fn setup() { testing::setup(); }
+    fn setup() {
+        testing::setup();
+    }
 
     #[test]
     #[allow(clippy::assertions_on_constants)]

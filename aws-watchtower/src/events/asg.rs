@@ -9,25 +9,25 @@ use serde_derive::{Deserialize, Serialize};
 // cf. https://docs.aws.amazon.com/autoscaling/ec2/userguide/cloud-watch-events.html
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AutoScalingEvent {
-    pub version:     String,
-    pub id:          String,
+    pub version: String,
+    pub id: String,
     #[serde(rename = "detail-type")]
     pub detail_type: String,
-    pub account:     String,
-    pub time:        String,
-    pub region:      String,
-    pub resources:   Vec<String>,
-    pub detail:      AutoScalingEventDetail,
+    pub account: String,
+    pub time: String,
+    pub region: String,
+    pub resources: Vec<String>,
+    pub detail: AutoScalingEventDetail,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AutoScalingEventDetail {
     #[serde(rename = "RequestId")]
-    pub request_id:              String,
+    pub request_id: String,
     #[serde(rename = "AutoScalingGroupName")]
     pub auto_scaling_group_name: String,
     #[serde(rename = "EC2InstanceId")]
-    pub ec2_instance_id:         String,
+    pub ec2_instance_id: String,
 }
 
 #[derive(Debug)]
@@ -45,7 +45,7 @@ pub struct LifeCycleDetails<'a> {
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct TerminationDetails<'a> {
-    pub instance_id:             &'a str,
+    pub instance_id: &'a str,
     pub auto_scaling_group_name: &'a str,
 }
 
@@ -79,7 +79,7 @@ impl<'a> AsgLifeCycleEvent<'a> {
 
     fn successful_termination_from(asg: &'a AutoScalingEvent) -> Result<AsgLifeCycleEvent<'a>, Error> {
         let details = TerminationDetails {
-            instance_id:             &asg.detail.ec2_instance_id,
+            instance_id: &asg.detail.ec2_instance_id,
             auto_scaling_group_name: &asg.detail.auto_scaling_group_name,
         };
 
@@ -123,9 +123,9 @@ pub fn handle<T: Bosun>(
     };
 
     let auto_scaling_info = AsgScalingInfo {
-        ec2_instance_id:         asg.detail.ec2_instance_id,
+        ec2_instance_id: asg.detail.ec2_instance_id,
         auto_scaling_group_name: asg.detail.auto_scaling_group_name,
-        auto_scaling_event:      asg.detail_type,
+        auto_scaling_event: asg.detail_type,
     };
 
     Ok(HandleResult::AsgScalingInfo { auto_scaling_info })
@@ -159,20 +159,22 @@ mod tests {
     use chrono::offset::Utc;
     use spectral::prelude::*;
 
-    fn setup() { testing::setup(); }
+    fn setup() {
+        testing::setup();
+    }
 
     fn asg_success_full_termination_event() -> AutoScalingEvent {
         AutoScalingEvent {
-            version:     "0".to_string(),
-            id:          "12345678-1234-1234-1234-123456789012".to_string(),
+            version: "0".to_string(),
+            id: "12345678-1234-1234-1234-123456789012".to_string(),
             detail_type: "EC2 Instance Terminate Successful".to_string(),
-            account:     "123456789012".to_string(),
-            time:        Utc::now().to_string(),
-            region:      "us-west-2".to_string(),
-            resources:   vec!["auto-scaling-group-arn".to_string(), "instance-arn".to_string()],
-            detail:      AutoScalingEventDetail {
-                request_id:              "12345678-1234-1234-1234-123456789012".to_string(),
-                ec2_instance_id:         "i-1234567890abcdef0".to_string(),
+            account: "123456789012".to_string(),
+            time: Utc::now().to_string(),
+            region: "us-west-2".to_string(),
+            resources: vec!["auto-scaling-group-arn".to_string(), "instance-arn".to_string()],
+            detail: AutoScalingEventDetail {
+                request_id: "12345678-1234-1234-1234-123456789012".to_string(),
+                ec2_instance_id: "i-1234567890abcdef0".to_string(),
                 auto_scaling_group_name: "my-auto-scaling-group".to_string(),
             },
         }
@@ -186,7 +188,7 @@ mod tests {
         let instance_id = "i-1234567890abcdef0".to_string();
         let auto_scaling_group_name = "my-auto-scaling-group".to_string();
         let expected_details = TerminationDetails {
-            instance_id:             instance_id.as_str(),
+            instance_id: instance_id.as_str(),
             auto_scaling_group_name: auto_scaling_group_name.as_str(),
         };
 
@@ -194,11 +196,9 @@ mod tests {
 
         asserting("failed to parse asg event").that(&asg_event).is_ok();
         match asg_event.unwrap() {
-            AsgLifeCycleEvent::SuccessfulTermination(ref details) => {
-                assert_that(&details)
-                    .named("termination details")
-                    .is_equal_to(&expected_details)
-            }
+            AsgLifeCycleEvent::SuccessfulTermination(ref details) => assert_that(&details)
+                .named("termination details")
+                .is_equal_to(&expected_details),
             _ => panic!("wrong event"),
         };
     }

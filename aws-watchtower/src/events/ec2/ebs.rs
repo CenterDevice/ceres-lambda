@@ -29,24 +29,24 @@ use std::fmt;
 // }
 #[derive(Debug, Deserialize)]
 pub struct VolumeEvent {
-    pub version:   String,
-    pub id:        String,
+    pub version: String,
+    pub id: String,
     // These fields do not exist, because serde used both of them to "route" the deserialization to this point.
     // #[serde(rename = "detail-type")]
     // pub detail_type: String,
     // pub source: String,
-    pub account:   String,
-    pub time:      String,
-    pub region:    String,
+    pub account: String,
+    pub time: String,
+    pub region: String,
     pub resources: Vec<String>,
-    pub detail:    VolumeEventDetail,
+    pub detail: VolumeEventDetail,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct VolumeEventDetail {
-    event:      VolumeEventType,
-    result:     VolumeResult,
-    cause:      String,
+    event: VolumeEventType,
+    result: VolumeResult,
+    cause: String,
     #[serde(rename = "request-id")]
     request_id: String,
 }
@@ -218,13 +218,11 @@ mod tests {
         testing::setup();
 
         let volume_info = VolumeInfo {
-            volume_id:   "012345678901".to_string(),
+            volume_id: "012345678901".to_string(),
             create_time: "yyyy-mm-ddThh:mm:ssZ".to_string(),
-            state:       "in-use".to_string(),
-            kms_key_id:  Some(
-                "arn:aws:kms:sa-east-1:0123456789ab:key/01234567-0123-0123-0123-0123456789ab".to_string(),
-            ),
-            encrypted:   true,
+            state: "in-use".to_string(),
+            kms_key_id: Some("arn:aws:kms:sa-east-1:0123456789ab:key/01234567-0123-0123-0123-0123456789ab".to_string()),
+            encrypted: true,
             attachments: Vec::new(),
         };
         let result = HandleResult::VolumeInfo { volume_info };
