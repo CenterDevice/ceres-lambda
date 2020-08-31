@@ -55,8 +55,6 @@ impl Default for FunctionConfig {
 mod tests {
     use spectral::prelude::*;
 
-    use crate::asg_mapping::Mapping;
-
     use super::*;
 
     #[test]

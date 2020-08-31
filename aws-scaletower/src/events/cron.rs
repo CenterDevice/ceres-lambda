@@ -26,7 +26,7 @@ use crate::events::HandleResult;
 pub struct ScheduledEvent {
     pub account: String,
     pub region: String,
-    // #[serde(rename = "detail-type")]
+    #[serde(rename = "detail-type")]
     pub detail_type: String,
     pub source: String,
     pub time: String,

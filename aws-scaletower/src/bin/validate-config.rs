@@ -1,4 +1,4 @@
-use aws_watchtower::config::EncryptedFunctionConfig;
+use aws_scaletower::config::EncryptedFunctionConfig;
 
 use aws::AwsClientConfig;
 use clams::config::Config;

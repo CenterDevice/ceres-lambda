@@ -6,6 +6,15 @@ build = "build.rs"
 
 edition = "2018"
 
+
+[[bin]]
+name = "aws-scaletower"
+path = "src/bin/aws-scaletower.rs"
+
+[[bin]]
+name = "validate-config"
+path = "src/bin/validate-config.rs"
+
 [[bin]]
 path = "src/bin/get_burst_balances.rs"
 name = "get_burst_balances"

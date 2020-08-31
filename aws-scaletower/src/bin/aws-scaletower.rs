@@ -1,4 +1,4 @@
-use aws_watchtower::lambda_handler;
+use aws_scaletower::lambda_handler;
 use lambda_runtime::lambda;
 
 fn main() {
