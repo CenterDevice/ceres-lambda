@@ -73,17 +73,26 @@ pub fn burst_balance<T: Bosun>(
     let candidates: Vec<_> = forecasts.into_iter().filter(|x| x.is_exhausted(config)).collect();
     debug!("Burst balance: Identified candidates: '{:?}'", candidates);
 
-    let candidates: Vec<_> = candidates.into_iter().map(|x| x.instance_id).collect();
-    let len = candidates.len();
-    info!("Burst balance: Identified {} candidates: '{:?}'", len, candidates);
-    bosun_emit_candidates(bosun, len)?;
-
-    if config.terminate {
-        aws::ec2::ec2::terminate_instances(aws_client_config, candidates)?;
-        bosun_emit_terminated(bosun, len)?;
+    if log::max_level() > log::Level::Info {
+        for c in &candidates {
+            info!("Candidate {} with balance {:?} (limit: {}) and forecast {:?} (limit: {}) selected for termination (use eta: {}).",
+                  c.instance_id, c.balance, config.burst_balance_limit, c.forecast, config.eta_limit_min, config.use_linear_regression);
+        }
     }
 
-    Ok(len)
+    let instances: Vec<_> = candidates.into_iter().map(|x| x.instance_id).collect();
+    info!("Burst balance: Identified {} instances for termination due to exhausted burst balance: '{:?}'", instances.len(), instances);
+    bosun_emit_candidates(bosun, instances.len())?;
+
+    if config.terminate {
+        aws::ec2::ec2::terminate_instances(aws_client_config, instances.clone())?;
+        info!("Terminated {} instances: '{:?}'", instances.len(), instances);
+        bosun_emit_terminated(bosun, instances.len())?;
+    } else {
+        info!("Would have terminated {} instances: '{:?}'", instances.len(), instances);
+    }
+
+    Ok(instances.len())
 }
 
 trait IsExhausted {
