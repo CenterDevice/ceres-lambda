@@ -55,7 +55,7 @@ impl Default for FunctionConfig {
             instance_name_filter: "centerdevice-ec2-document_server*".to_string(),
             look_back_min: 60,
             use_linear_regression: true,
-            burst_balance_limit: 10,
+            burst_balance_limit: 10.0,
             eta_limit_min: 10,
             terminate: false,
         };
@@ -69,8 +69,8 @@ pub struct BurstBalanceConfig {
     pub instance_name_filter: String,
     pub look_back_min: i64,
     pub use_linear_regression: bool,
-    pub burst_balance_limit: usize,
-    pub eta_limit_min: usize,
+    pub burst_balance_limit: f64,
+    pub eta_limit_min: i64,
     pub terminate: bool,
 }
 

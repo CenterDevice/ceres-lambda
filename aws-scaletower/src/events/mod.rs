@@ -26,7 +26,9 @@ pub enum HandleResult {
     #[serde(rename = "empty")]
     Empty,
     #[serde(rename = "cron")]
-    Cron,
+    Cron {
+        burst_balance: usize,
+    },
     #[serde(rename = "ping")]
     Ping { echo_reply: String },
 }

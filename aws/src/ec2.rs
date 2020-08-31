@@ -241,7 +241,7 @@ pub mod ec2 {
     use failure::Error;
     use log::debug;
     pub use rusoto_ec2::Filter;
-    use rusoto_ec2::{DescribeInstancesRequest, Ec2, Ec2Client};
+    use rusoto_ec2::{DescribeInstancesRequest, Ec2, Ec2Client, TerminateInstancesRequest};
     use serde_derive::{Deserialize, Serialize};
 
     #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, Copy)]
@@ -305,5 +305,23 @@ pub mod ec2 {
         debug!("Successfully retrieved ec2 instance ids: '{:?}'", instance_ids);
 
         Ok(instance_ids)
+    }
+
+    pub fn terminate_instances(aws_client_config: &AwsClientConfig, instance_ids: Vec<String>) -> Result<(), Error>{
+        debug!("Terminating ec2 instances '{:?}'", &instance_ids);
+
+        let credentials_provider = aws_client_config.credentials_provider.clone();
+        let http_client = aws_client_config.http_client.clone();
+        let ec2 = Ec2Client::new_with(http_client, credentials_provider, aws_client_config.region.clone());
+
+        let request = TerminateInstancesRequest {
+            dry_run: Some(false),
+            instance_ids,
+        };
+
+        ec2.terminate_instances(request).sync()?;
+        debug!("Successfully requested instance termination.");
+
+        Ok(())
     }
 }
