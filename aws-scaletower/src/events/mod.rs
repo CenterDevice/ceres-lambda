@@ -7,12 +7,15 @@ use log::debug;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{self, Value};
 
+pub mod cron;
 pub mod ping;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "source")]
 #[allow(clippy::large_enum_variant)]
 pub enum Event {
+    #[serde(rename = "cron")]
+    Cron(cron::ScheduledEvent),
     #[serde(rename = "ping")]
     Ping(ping::Ping),
 }
@@ -22,6 +25,8 @@ pub enum Event {
 pub enum HandleResult {
     #[serde(rename = "empty")]
     Empty,
+    #[serde(rename = "cron")]
+    Cron,
     #[serde(rename = "ping")]
     Ping { echo_reply: String },
 }
@@ -69,6 +74,7 @@ fn handle_event<T: Bosun>(
     bosun: &T,
 ) -> Result<HandleResult, Error> {
     match event {
+        Event::Cron(_) => cron::handle(aws_client_config, ctx, config, bosun),
         Event::Ping(ping) => ping::handle(ping, ctx, config, bosun),
     }
 }
