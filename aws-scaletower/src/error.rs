@@ -1,7 +1,7 @@
 use failure::Fail;
 
 #[derive(Debug, Fail)]
-pub enum AwsWatchtowerError {
+pub enum AwsScaleTowerError {
     #[fail(display = "failed to read environment variable '{}'", _0)]
     FailedEnvVar(&'static str),
     #[fail(display = "failed to parse event '{}'", _0)]
