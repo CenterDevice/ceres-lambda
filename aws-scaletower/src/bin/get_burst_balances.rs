@@ -2,7 +2,7 @@ use aws::{
     auth::{create_provider_with_assuem_role, StsAssumeRoleSessionCredentialsProviderConfig},
     AwsClientConfig, Filter,
 };
-use aws_scaletower::*;
+use aws_scaletower::burst_balance::*;
 use chrono::prelude::*;
 use prettytable::{format, Cell, Row, Table};
 use rusoto_core::Region;

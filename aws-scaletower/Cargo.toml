@@ -16,6 +16,8 @@ path = "src/lib.rs"
 
 [dependencies]
 aws = { version = "0.0.3", path = "../aws" }
+clams = "0.0.13"
+clams-derive = "^0.0.4"
 bosun = { version = "0.0.2", path = "../bosun" }
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "3"
@@ -23,6 +25,7 @@ env_logger = "0.6"
 failure = "0.1"
 failure_derive = "0.1"
 lambda_runtime = "0.1"
+lambda = { version = "0.1.0", path = "../lambda" }
 lazy_static = "1.2"
 linreg = "0.2"
 log = "0.4"
