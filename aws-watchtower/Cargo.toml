@@ -11,7 +11,7 @@ name = "aws-watchtower"
 path = "src/bin/aws-watchtower.rs"
 
 [[bin]]
-name = "validate-config"
+name = "validate-config-watchtower"
 path = "src/bin/validate-config.rs"
 
 [lib]

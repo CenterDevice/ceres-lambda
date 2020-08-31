@@ -12,7 +12,7 @@ name = "aws-scaletower"
 path = "src/bin/aws-scaletower.rs"
 
 [[bin]]
-name = "validate-config"
+name = "validate-config-scaletower"
 path = "src/bin/validate-config.rs"
 
 [[bin]]
