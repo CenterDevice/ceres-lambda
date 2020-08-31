@@ -11,6 +11,7 @@ use lambda::config::{BosunConfig, EncryptedConfig};
 #[derive(Config, PartialEq, Deserialize, Serialize, Debug)]
 pub struct EncryptedFunctionConfig {
     pub bosun: BosunConfig,
+    pub burst_balance: BurstBalanceConfig,
 }
 
 impl EncryptedConfig<EncryptedFunctionConfig, FunctionConfig> for EncryptedFunctionConfig {
@@ -24,6 +25,8 @@ impl EncryptedConfig<EncryptedFunctionConfig, FunctionConfig> for EncryptedFunct
 
         let config = FunctionConfig {
             bosun,
+            burst_balance: self.burst_balance,
+
         };
 
         Ok(config)
@@ -33,6 +36,7 @@ impl EncryptedConfig<EncryptedFunctionConfig, FunctionConfig> for EncryptedFunct
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct FunctionConfig {
     pub bosun: BosunConfig,
+    pub burst_balance: BurstBalanceConfig,
 }
 
 impl FunctionConfig {}
@@ -47,9 +51,29 @@ impl Default for FunctionConfig {
             tags: HashMap::new(),
         };
 
-        FunctionConfig { bosun }
+        let burst_balance = BurstBalanceConfig {
+            instance_name_filter: "centerdevice-ec2-document_server*".to_string(),
+            look_back_min: 60,
+            use_linear_regression: true,
+            burst_balance_limit: 10,
+            eta_limit_min: 10,
+            terminate: false,
+        };
+
+        FunctionConfig { bosun, burst_balance }
     }
 }
+
+#[derive(PartialEq, Deserialize, Serialize, Debug)]
+pub struct BurstBalanceConfig {
+    pub instance_name_filter: String,
+    pub look_back_min: i64,
+    pub use_linear_regression: bool,
+    pub burst_balance_limit: usize,
+    pub eta_limit_min: usize,
+    pub terminate: bool,
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -69,26 +93,17 @@ timeout = 5
 tag1 = 'value1'
 tag2 = 'value2'
 
-[asg]
-scaledown_silence_duration = "24h"
-
-[[asg.mappings.mapping]]
-search = 'webserver'
-tag_name = 'webserver'
-host_prefix = 'webserver-'
-
-[[asg.mappings.mapping]]
-search = 'import'
-tag_name = 'import'
-host_prefix = 'import-'
-
-[ec2]
-scaledown_silence_duration = "15m"
+[burst_balance]
+instance_name_filter = "centerdevice-ec2-document_server*"
+look_back_min = 60
+use_linear_regression = true
+burst_balance_limit = 10
+eta_limit_min = 10
+terminate = false
 "#;
         let mut expected = FunctionConfig::default();
         expected.bosun.tags.insert("tag1".to_string(), "value1".to_string());
         expected.bosun.tags.insert("tag2".to_string(), "value2".to_string());
-
         let config: Result<FunctionConfig, _> = toml::from_str(&toml);
 
         asserting("function config loads successfully")
