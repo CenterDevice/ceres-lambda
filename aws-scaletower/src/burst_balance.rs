@@ -5,7 +5,7 @@ use aws::{
 };
 use chrono::{prelude::*, Duration};
 use failure::Error;
-use log::{debug, trace};
+use log::trace;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -110,14 +110,14 @@ pub fn get_burst_balances<S: Into<Option<Duration>>, T: Into<Option<Filters>>>(
     let filters: Option<Filters> = filters.into();
     let filters = filters.map(|x| x.into_iter().map(|f| f.into()).collect());
     let instance_ids = get_instances_ids(aws_client_config, filters)?;
-    debug!("{:#?}", &instance_ids);
+    trace!("{:#?}", &instance_ids);
 
     let filters = vec![AwsFilter {
         name: Some("attachment.instance-id".to_string()),
         values: Some(instance_ids),
     }];
     let volume_infos = get_volumes_info(aws_client_config, filters)?;
-    debug!("{:#?}", &volume_infos);
+    trace!("{:#?}", &volume_infos);
 
     let vol_atts: Vec<_> = volume_infos
         .into_iter()
@@ -127,13 +127,13 @@ pub fn get_burst_balances<S: Into<Option<Duration>>, T: Into<Option<Filters>>>(
             volume_id: x.volume_id,
         })
         .collect();
-    debug!("{:#?}", &vol_atts);
+    trace!("{:#?}", &vol_atts);
 
     let vols_instances_map: VolInstanceMap = vol_atts.into();
 
     let vol_ids = vols_instances_map.0.keys().cloned().collect();
     let metric_data = cloudwatch::get_burst_balances(aws_client_config, vol_ids, start, end, period)?;
-    debug!("{:#?}", &metric_data);
+    trace!("{:#?}", &metric_data);
 
     let burst_balances = metric_data
         .into_iter()

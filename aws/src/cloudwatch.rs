@@ -1,12 +1,14 @@
-use crate::{AwsClientConfig, AwsError};
-use chrono::{prelude::*, Duration};
+use std::convert::{TryFrom, TryInto};
+
+use chrono::{Duration, prelude::*};
 use failure::Error;
-use log::debug;
+use log::{debug, trace};
 use rusoto_cloudwatch::{
     CloudWatch, CloudWatchClient, Dimension, GetMetricDataInput, Metric as RusotoMetric, MetricDataQuery, MetricStat,
 };
 use serde_derive::Serialize;
-use std::convert::{TryFrom, TryInto};
+
+use crate::{AwsClientConfig, AwsError};
 
 #[derive(Debug, Serialize)]
 pub struct BurstBalanceMetricData {
@@ -120,7 +122,7 @@ pub fn get_burst_balances<T: Into<Option<Duration>>>(
         end_time,
         ..Default::default()
     };
-    debug!("CloudWatch burst balance request: '{:#?}'", request);
+    trace!("CloudWatch burst balance request: '{:?}'", request);
 
     let response = cloudwatch.get_metric_data(request).sync()?;
     debug!("CloudWatch burst balance request result: '{:?}'", response);

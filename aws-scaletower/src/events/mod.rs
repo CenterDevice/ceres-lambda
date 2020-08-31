@@ -14,7 +14,7 @@ pub mod ping;
 #[serde(tag = "source")]
 #[allow(clippy::large_enum_variant)]
 pub enum Event {
-    #[serde(rename = "cron")]
+    #[serde(rename = "aws.events")]
     Cron(cron::ScheduledEvent),
     #[serde(rename = "ping")]
     Ping(ping::Ping),
