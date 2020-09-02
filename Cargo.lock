@@ -73,6 +73,7 @@ dependencies = [
  "rusoto_cloudwatch 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_core 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_ec2 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_iam 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_kms 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_sts 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1700,6 +1701,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusoto_iam"
+version = "0.36.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusoto_core 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_urlencoded 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xml-rs 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "rusoto_kms"
 version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2630,6 +2642,7 @@ dependencies = [
 "checksum rusoto_core 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "18a699355ef3189e3bbf34b64ff5a31f06456b689b09d05cdb4a901dcf4406a8"
 "checksum rusoto_credential 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bcc8dd0f0a7e8b62f31aa23fa12fa0a7ac0e1eb52f6f4d4279d8a2ae51d8f099"
 "checksum rusoto_ec2 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "833e6433e688b642e1781458188e7d5b33f1e0e35aa0fff7c10f31c443daaf2e"
+"checksum rusoto_iam 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "582813a0e26b45ac14305c780a8a7a092b13775ae7209f4de9c68bb6fbe5c101"
 "checksum rusoto_kms 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f887ab87283fa86819bd0af39ae6309b3770256ecf9a8e1ed10f3347fbf8ff4f"
 "checksum rusoto_sts 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cd5a6ebb596b8739ab7b3d8d98900d6633712b4e79d2540fa7198a82c2605e4e"
 "checksum rust-argon2 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2bc8af4bda8e1ff4932523b94d3dd20ee30a87232323eda55903ffd71d2fb017"
