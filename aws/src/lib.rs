@@ -24,8 +24,11 @@ pub struct AwsClientConfig {
 
 impl AwsClientConfig {
     pub fn new() -> Result<AwsClientConfig, Error> {
+        AwsClientConfig::with_region(Region::EuCentral1)
+    }
+
+    pub fn with_region(region: Region) -> Result<AwsClientConfig, Error> {
         let credential_provider = auth::create_provider()?;
-        let region = Region::EuCentral1;
 
         AwsClientConfig::with_credentials_provider_and_region(credential_provider, region)
     }

@@ -1,17 +1,17 @@
 use crate::AwsClientConfig;
 use failure::{Error, err_msg};
 use log::{debug, warn};
-use rusoto_iam::{Iam, IamClient, ListUsersRequest, ListAccessKeysRequest, GetAccessKeyLastUsedRequest};
+use rusoto_iam::{Iam, IamClient, ListUsersRequest, ListAccessKeysRequest, GetAccessKeyLastUsedRequest, ListUsersError};
 use chrono::{DateTime, Utc};
 use std::str::FromStr;
 use std::convert::TryFrom;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct User {
-    password_last_used: Option<DateTime<Utc>>,
-    user_id: String,
-    user_name: String,
-    path: String,
+    pub password_last_used: Option<DateTime<Utc>>,
+    pub user_id: String,
+    pub user_name: String,
+    pub path: String,
 }
 
 impl From<rusoto_iam::User> for User {
@@ -43,7 +43,7 @@ pub fn list_users(aws_client_config: &AwsClientConfig) -> Result<Vec<User>, Erro
     };
     let res = iam.list_users(request).sync();
     debug!("Finished list user request; success={}.", res.is_ok());
-    let res = res?;
+    let res = res.expect("failed to list users");
 
     if log::max_level() >= log::Level::Warn && res.is_truncated.is_some() && res.is_truncated.unwrap() {
         warn!("List users: Result is truncated.");
@@ -56,12 +56,12 @@ pub fn list_users(aws_client_config: &AwsClientConfig) -> Result<Vec<User>, Erro
     Ok(res)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AccessKeyMetadata {
-    access_key_id: String,
-    create_date: DateTime<Utc>,
-    status: AccessKeyMetadataStatus,
-    user_name: String,
+    pub access_key_id: String,
+    pub create_date: DateTime<Utc>,
+    pub status: AccessKeyMetadataStatus,
+    pub user_name: String,
 }
 
 impl TryFrom<rusoto_iam::AccessKeyMetadata> for AccessKeyMetadata {
@@ -135,11 +135,11 @@ pub fn list_access_keys_for_user(aws_client_config: &AwsClientConfig, user_name:
     res
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AccessKeyLastUsed {
-    last_used_date: DateTime<Utc>,
-    region: String,
-    service_name: String,
+    pub last_used_date: DateTime<Utc>,
+    pub region: String,
+    pub service_name: String,
 }
 
 impl TryFrom<rusoto_iam::AccessKeyLastUsed> for AccessKeyLastUsed {
