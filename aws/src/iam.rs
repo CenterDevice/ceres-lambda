@@ -1,7 +1,7 @@
 use crate::AwsClientConfig;
 use failure::{Error, err_msg};
 use log::{debug, warn};
-use rusoto_iam::{Iam, IamClient, ListUsersRequest, ListAccessKeysRequest, GetAccessKeyLastUsedRequest, ListUsersError};
+use rusoto_iam::{Iam, IamClient, ListUsersRequest, ListAccessKeysRequest, GetAccessKeyLastUsedRequest};
 use chrono::{DateTime, Utc};
 use std::str::FromStr;
 use std::convert::TryFrom;
@@ -137,20 +137,22 @@ pub fn list_access_keys_for_user(aws_client_config: &AwsClientConfig, user_name:
 
 #[derive(Debug, Clone)]
 pub struct AccessKeyLastUsed {
+    pub user_name: String,
+    pub access_key_id: String,
     pub last_used_date: DateTime<Utc>,
     pub region: String,
     pub service_name: String,
 }
 
-impl TryFrom<rusoto_iam::AccessKeyLastUsed> for AccessKeyLastUsed {
-    type Error = Error;
-
-    fn try_from(value: rusoto_iam::AccessKeyLastUsed) -> Result<Self, Self::Error> {
+impl AccessKeyLastUsed {
+    fn try_from(user_name: String, access_key_id: String, value: rusoto_iam::AccessKeyLastUsed) -> Result<Self, Error> {
         let last_used_date = DateTime::parse_from_rfc3339(&value.last_used_date)
             .map_err(|_| err_msg("failed to parse create date"))
             .map(|x| x.with_timezone(&Utc))?;
 
         Ok(AccessKeyLastUsed {
+            user_name,
+            access_key_id,
             last_used_date,
             region: value.region,
             service_name: value.service_name,
@@ -158,7 +160,7 @@ impl TryFrom<rusoto_iam::AccessKeyLastUsed> for AccessKeyLastUsed {
     }
 }
 
-pub fn list_access_last_used(aws_client_config: &AwsClientConfig, access_key_id: String) -> Result<AccessKeyLastUsed, Error> {
+pub fn list_access_last_used(aws_client_config: &AwsClientConfig, user_name: String, access_key_id: String) -> Result<AccessKeyLastUsed, Error> {
     debug!("Get access key last used for key '{}'", &access_key_id);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
@@ -173,5 +175,5 @@ pub fn list_access_last_used(aws_client_config: &AwsClientConfig, access_key_id:
     debug!("Finished get access key last used for key '{}'; success={}.", &access_key_id, res.is_ok());
     let res = res?.access_key_last_used.ok_or_else(|| err_msg("no result received"))?;
 
-    AccessKeyLastUsed::try_from(res)
+    AccessKeyLastUsed::try_from(user_name, access_key_id, res)
 }
