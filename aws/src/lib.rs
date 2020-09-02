@@ -5,6 +5,7 @@ use std::sync::Arc;
 pub mod auth;
 pub mod cloudwatch;
 pub mod ec2;
+pub mod iam;
 pub mod kms;
 
 #[derive(Debug, Fail)]
