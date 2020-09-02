@@ -1,7 +1,4 @@
-use aws::{
-    auth::{create_provider_with_assuem_role, StsAssumeRoleSessionCredentialsProviderConfig},
-    AwsClientConfig,
-};
+use aws::AwsClientConfig;
 use rusoto_core::Region;
 use chrono::prelude::*;
 use prettytable::{format, Cell, Row, Table};
@@ -21,6 +18,7 @@ fn main() {
         Cell::new("User"),
         Cell::new("Credential Type"),
         Cell::new("Last Time Used"),
+        Cell::new("Last Usage [days]"),
     ]));
 
     for c in &credentials {
@@ -40,11 +38,18 @@ fn aws_credential_to_row(credential: &AwsCredential) -> Row {
     let last_time_used = credential.last_used
         .map(|x| x.to_rfc3339())
         .unwrap_or_else(|| "-".to_string());
+    let last_usage = if let Some(last_used) = credential.last_used {
+        let since = Utc::now() - last_used;
+        format!("{}", since.num_days())
+    } else {
+        "-".to_string()
+    };
 
     Row::new(vec![
         Cell::new(service),
         Cell::new(&user),
         Cell::new(&credential_type),
         Cell::new(&last_time_used),
+        Cell::new(&last_usage).style_spec("r"),
     ])
 }
