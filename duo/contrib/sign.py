@@ -38,6 +38,7 @@ if __name__ == '__main__':
     params = dict()
     # params["realname"] = u"First Last"
     # params["username"] = u"root"
+    params["state"] = u"disabled"
 
     result = sign("POST", "api-XXXXXXXX.duosecurity.com", "/admin/v1/users", params, "Zh5eGmUq9zpfQnyUIu5OL9iWoMMv5ZNmk3zLJ4Ep", "DIWJ8X6AEYOR5OMC6TQ1")
 

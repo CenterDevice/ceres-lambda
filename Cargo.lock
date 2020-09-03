@@ -589,6 +589,7 @@ dependencies = [
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "spectral 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "testing 0.0.1",
+ "url 2.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
