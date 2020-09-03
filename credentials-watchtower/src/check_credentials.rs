@@ -48,7 +48,7 @@ impl From<duo::User> for Credential {
             id: user.user_id.clone(),
             user_name: user.realname.clone().unwrap_or_else(|| "-".to_string()),
             credential: CredentialType::TwoFA,
-            last_used: user.last_login.clone(),
+            last_used: user.last_login,
         }
     }
 }
