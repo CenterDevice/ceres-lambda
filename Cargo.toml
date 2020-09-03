@@ -5,6 +5,7 @@ members = [
   "aws-watchtower",
   "bosun",
   "credentials-watchtower",
+  "duo",
   "lambda",
   "testing",
 ]
