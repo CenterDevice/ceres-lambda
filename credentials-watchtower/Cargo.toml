@@ -22,6 +22,7 @@ clams-derive = "^0.0.4"
 bosun = { version = "0.0.2", path = "../bosun" }
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "3"
+duo = { version = "0.0.1", path = "../duo" }
 env_logger = "0.6"
 failure = "0.1"
 failure_derive = "0.1"

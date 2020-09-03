@@ -39,6 +39,15 @@ pub enum DuoResponse<T> {
     Fail { code: usize, message: String, message_detail: String },
 }
 
+impl<T> DuoResponse<T> {
+    pub fn ok(&self) -> Option<&T> {
+        match self {
+            DuoResponse::Ok { response: ref data } => Some(data),
+            DuoResponse::Fail { .. } => None,
+        }
+    }
+}
+
 /// Encapsulates Duo server connection.
 #[derive(Debug)]
 pub struct DuoClient {
