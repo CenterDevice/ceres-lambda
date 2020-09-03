@@ -113,8 +113,9 @@ pub fn get_burst_balances<T: Into<Option<Duration>>>(
         })
         .collect();
 
-    let start_time = start.to_rfc3339();
-    let end_time = end.to_rfc3339();
+    // Truncation is necessary, because Linux may return up to 9 digits, but AWS only understands 6.
+    let start_time = start.trunc_subsecs(6).to_rfc3339();
+    let end_time = end.trunc_subsecs(6).to_rfc3339();
     let request = GetMetricDataInput {
         metric_data_queries,
         scan_by: Some("TimestampAscending".to_string()),
