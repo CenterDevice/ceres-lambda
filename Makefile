@@ -8,13 +8,13 @@ test:
 	cargo test --workspace --all-features
 
 clippy:
-	cargo clippy --workspace --all-targets --all-features -- -D warnings $$(source ".clippy.args")
+	cargo clippy --workspace --all-targets --all-features
 
 fmt:
-	cargo +nightly fmt
+	cargo fmt
 
 fmt-check:
-	cargo +nightly fmt -- --check
+	cargo fmt -- --check
 
 audit:
 	cargo audit
