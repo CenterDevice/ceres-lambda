@@ -26,7 +26,6 @@ impl EncryptedConfig<EncryptedFunctionConfig, FunctionConfig> for EncryptedFunct
         let config = FunctionConfig {
             bosun,
             burst_balance: self.burst_balance,
-
         };
 
         Ok(config)
@@ -73,7 +72,6 @@ pub struct BurstBalanceConfig {
     pub eta_limit_min: i64,
     pub terminate: bool,
 }
-
 
 #[cfg(test)]
 mod tests {

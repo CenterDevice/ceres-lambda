@@ -307,7 +307,7 @@ pub mod ec2 {
         Ok(instance_ids)
     }
 
-    pub fn terminate_instances(aws_client_config: &AwsClientConfig, instance_ids: Vec<String>) -> Result<(), Error>{
+    pub fn terminate_instances(aws_client_config: &AwsClientConfig, instance_ids: Vec<String>) -> Result<(), Error> {
         debug!("Terminating ec2 instances '{:?}'", &instance_ids);
 
         let credentials_provider = aws_client_config.credentials_provider.clone();

@@ -1,4 +1,3 @@
-
 use bosun::{Bosun, Metadata};
 use failure::Error;
 
@@ -28,12 +27,7 @@ fn bosun_metadata() -> Vec<Metadata<'static>> {
         "Number of instances terminated because of burst balance exhaustion",
     ));
 
-    metadatas.push(Metadata::new(
-        SCHEDULED_EVENT,
-        "gauge",
-        "Event",
-        "AWS schedule event",
-    ));
+    metadatas.push(Metadata::new(SCHEDULED_EVENT, "gauge", "Event", "AWS schedule event"));
 
     metadatas
 }

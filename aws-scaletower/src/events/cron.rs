@@ -7,7 +7,7 @@ use serde_derive::Deserialize;
 use aws::{AwsClientConfig, Filter};
 use bosun::{Bosun, Datum, Tags};
 
-use crate::burst_balance::{BurstBalance, get_burst_balances};
+use crate::burst_balance::{get_burst_balances, BurstBalance};
 use crate::config::{BurstBalanceConfig, FunctionConfig};
 use crate::events::HandleResult;
 use crate::metrics;
@@ -46,9 +46,7 @@ pub fn handle<T: Bosun>(
 
     let burst_balance = burst_balance(aws_client_config, &config.burst_balance, bosun)?;
 
-    let handle_result = HandleResult::Cron {
-        burst_balance,
-    };
+    let handle_result = HandleResult::Cron { burst_balance };
 
     Ok(handle_result)
 }
@@ -79,7 +77,11 @@ pub fn burst_balance<T: Bosun>(
     }
 
     let instances: Vec<_> = candidates.into_iter().map(|x| x.instance_id).collect();
-    info!("Burst balance: Identified {} instances for termination due to exhausted burst balance: '{:?}'", instances.len(), instances);
+    info!(
+        "Burst balance: Identified {} instances for termination due to exhausted burst balance: '{:?}'",
+        instances.len(),
+        instances
+    );
     bosun_emit_candidates(bosun, instances.len())?;
 
     if config.terminate {
@@ -134,7 +136,6 @@ fn bosun_emit_terminated<T: Bosun>(bosun: &T, value: usize) -> Result<(), Error>
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use chrono::Duration;
@@ -167,102 +168,102 @@ mod tests {
             }
         );
 
-    let event: Result<ScheduledEvent, _ > = serde_json::from_value(json);
+        let event: Result<ScheduledEvent, _> = serde_json::from_value(json);
 
-    info!("event = {:?}", event);
+        info!("event = {:?}", event);
 
-    assert_that( & event).is_ok();
-}
+        assert_that(&event).is_ok();
+    }
 
-#[test]
-fn is_exhausted_balance_negative() {
-    let config = BurstBalanceConfig {
-        instance_name_filter: "not-relevant".to_string(),
-        look_back_min: 0,
-        use_linear_regression: false,
-        burst_balance_limit: 10.0,
-        eta_limit_min: 10,
-        terminate: false,
-    };
-    let burst_balance = BurstBalance {
-        volume_id: "vol-123".to_string(),
-        instance_id: "i-456".to_string(),
-        timestamp: Some(Utc::now()),
-        balance: Some(11.0),
-        forecast: Some(Utc::now() + Duration::minutes(11)),
-    };
+    #[test]
+    fn is_exhausted_balance_negative() {
+        let config = BurstBalanceConfig {
+            instance_name_filter: "not-relevant".to_string(),
+            look_back_min: 0,
+            use_linear_regression: false,
+            burst_balance_limit: 10.0,
+            eta_limit_min: 10,
+            terminate: false,
+        };
+        let burst_balance = BurstBalance {
+            volume_id: "vol-123".to_string(),
+            instance_id: "i-456".to_string(),
+            timestamp: Some(Utc::now()),
+            balance: Some(11.0),
+            forecast: Some(Utc::now() + Duration::minutes(11)),
+        };
 
-    let res = burst_balance.is_exhausted(&config);
+        let res = burst_balance.is_exhausted(&config);
 
-    assert_that(&res).is_false();
-}
+        assert_that(&res).is_false();
+    }
 
-#[test]
-fn is_exhausted_balance_positive() {
-    let config = BurstBalanceConfig {
-        instance_name_filter: "not-relevant".to_string(),
-        look_back_min: 0,
-        use_linear_regression: false,
-        burst_balance_limit: 10.0,
-        eta_limit_min: 10,
-        terminate: false,
-    };
-    let burst_balance = BurstBalance {
-        volume_id: "vol-123".to_string(),
-        instance_id: "i-456".to_string(),
-        timestamp: Some(Utc::now()),
-        balance: Some(9.0),
-        forecast: Some(Utc::now() + Duration::minutes(11)),
-    };
+    #[test]
+    fn is_exhausted_balance_positive() {
+        let config = BurstBalanceConfig {
+            instance_name_filter: "not-relevant".to_string(),
+            look_back_min: 0,
+            use_linear_regression: false,
+            burst_balance_limit: 10.0,
+            eta_limit_min: 10,
+            terminate: false,
+        };
+        let burst_balance = BurstBalance {
+            volume_id: "vol-123".to_string(),
+            instance_id: "i-456".to_string(),
+            timestamp: Some(Utc::now()),
+            balance: Some(9.0),
+            forecast: Some(Utc::now() + Duration::minutes(11)),
+        };
 
-    let res = burst_balance.is_exhausted(&config);
+        let res = burst_balance.is_exhausted(&config);
 
-    assert_that(&res).is_true();
-}
+        assert_that(&res).is_true();
+    }
 
-#[test]
-fn is_exhausted_forecast_negative() {
-    let config = BurstBalanceConfig {
-        instance_name_filter: "not-relevant".to_string(),
-        look_back_min: 0,
-        use_linear_regression: true,
-        burst_balance_limit: 10.0,
-        eta_limit_min: 10,
-        terminate: false,
-    };
-    let burst_balance = BurstBalance {
-        volume_id: "vol-123".to_string(),
-        instance_id: "i-456".to_string(),
-        timestamp: Some(Utc::now()),
-        balance: Some(11.0),
-        forecast: Some(Utc::now() + Duration::minutes(12)),
-    };
+    #[test]
+    fn is_exhausted_forecast_negative() {
+        let config = BurstBalanceConfig {
+            instance_name_filter: "not-relevant".to_string(),
+            look_back_min: 0,
+            use_linear_regression: true,
+            burst_balance_limit: 10.0,
+            eta_limit_min: 10,
+            terminate: false,
+        };
+        let burst_balance = BurstBalance {
+            volume_id: "vol-123".to_string(),
+            instance_id: "i-456".to_string(),
+            timestamp: Some(Utc::now()),
+            balance: Some(11.0),
+            forecast: Some(Utc::now() + Duration::minutes(12)),
+        };
 
-    let res = burst_balance.is_exhausted(&config);
+        let res = burst_balance.is_exhausted(&config);
 
-    assert_that(&res).is_false();
-}
+        assert_that(&res).is_false();
+    }
 
-#[test]
-fn is_exhausted_forecast_positive() {
-    let config = BurstBalanceConfig {
-        instance_name_filter: "not-relevant".to_string(),
-        look_back_min: 0,
-        use_linear_regression: true,
-        burst_balance_limit: 10.0,
-        eta_limit_min: 10,
-        terminate: false,
-    };
-    let burst_balance = BurstBalance {
-        volume_id: "vol-123".to_string(),
-        instance_id: "i-456".to_string(),
-        timestamp: Some(Utc::now()),
-        balance: Some(11.0),
-        forecast: Some(Utc::now() + Duration::minutes(9)),
-    };
+    #[test]
+    fn is_exhausted_forecast_positive() {
+        let config = BurstBalanceConfig {
+            instance_name_filter: "not-relevant".to_string(),
+            look_back_min: 0,
+            use_linear_regression: true,
+            burst_balance_limit: 10.0,
+            eta_limit_min: 10,
+            terminate: false,
+        };
+        let burst_balance = BurstBalance {
+            volume_id: "vol-123".to_string(),
+            instance_id: "i-456".to_string(),
+            timestamp: Some(Utc::now()),
+            balance: Some(11.0),
+            forecast: Some(Utc::now() + Duration::minutes(9)),
+        };
 
-    let res = burst_balance.is_exhausted(&config);
+        let res = burst_balance.is_exhausted(&config);
 
-    assert_that(&res).is_true();
-}
+        assert_that(&res).is_true();
+    }
 }

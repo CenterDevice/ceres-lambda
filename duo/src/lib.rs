@@ -35,8 +35,14 @@ pub enum DuoError {
 #[serde(tag = "stat")]
 #[serde(rename_all = "UPPERCASE")]
 pub enum DuoResponse<T> {
-    Ok { response: T },
-    Fail { code: usize, message: String, message_detail: String },
+    Ok {
+        response: T,
+    },
+    Fail {
+        code: usize,
+        message: String,
+        message_detail: String,
+    },
 }
 
 impl<T> DuoResponse<T> {
@@ -59,12 +65,21 @@ pub struct DuoClient {
 
 impl DuoClient {
     /// Creates a new DuoClient.
-    pub fn new<S: Into<String>, T: Into<String>, U: Into<String>>(api_host_name: S, integration_key: T, secret_key: U) -> DuoResult<DuoClient> {
+    pub fn new<S: Into<String>, T: Into<String>, U: Into<String>>(
+        api_host_name: S,
+        integration_key: T,
+        secret_key: U,
+    ) -> DuoResult<DuoClient> {
         DuoClient::with_timeout(api_host_name, integration_key, secret_key, 5)
     }
 
     /// Creates a new DuoClient with specific timeout
-    pub fn with_timeout<S: Into<String>, T: Into<String>, U: Into<String>>(api_host_name: S, integration_key: T, secret_key: U, timeout_sec: u64) -> DuoResult<DuoClient> {
+    pub fn with_timeout<S: Into<String>, T: Into<String>, U: Into<String>>(
+        api_host_name: S,
+        integration_key: T,
+        secret_key: U,
+        timeout_sec: u64,
+    ) -> DuoResult<DuoClient> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(timeout_sec))
             .build()
@@ -81,15 +96,15 @@ impl DuoClient {
     fn get_duo_api<T: DeserializeOwned>(&self, path: &str, expected: StatusCode) -> DuoResult<DuoResponse<T>> {
         let uri = format!("https://{}{}", self.api_host_name, path);
 
-        let req = self.client
-            .get(&uri);
+        let req = self.client.get(&uri);
         let req = self.sign_req(req, Method::GET, path, &HashMap::new());
         debug!("Request: '{:?}'", req);
 
         let res = req.send();
         match res {
             Ok(mut response) if response.status() == expected => {
-                let text = response.text()
+                let text = response
+                    .text()
                     .map_err(|_| DuoError::ReceiveError("failed to read response body".to_string()))?;
                 trace!("Answer: '{}'", text);
                 let data = serde_json::from_str::<DuoResponse<T>>(&text)
@@ -101,10 +116,16 @@ impl DuoClient {
         }
     }
 
-    fn post_duo_api<T: DeserializeOwned>(&self, path: &str, params: &HashMap<&str, &str>, expected: StatusCode) -> DuoResult<DuoResponse<T>> {
+    fn post_duo_api<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        params: &HashMap<&str, &str>,
+        expected: StatusCode,
+    ) -> DuoResult<DuoResponse<T>> {
         let uri = format!("https://{}{}", self.api_host_name, path);
 
-        let req = self.client
+        let req = self
+            .client
             .post(&uri)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .query(params);
@@ -114,7 +135,8 @@ impl DuoClient {
         let res = req.send();
         match res {
             Ok(mut response) if response.status() == expected => {
-                let text = response.text()
+                let text = response
+                    .text()
                     .map_err(|_| DuoError::ReceiveError("failed to read response body".to_string()))?;
                 trace!("Answer: '{}'", text);
                 let data = serde_json::from_str::<DuoResponse<T>>(&text)
@@ -126,7 +148,13 @@ impl DuoClient {
         }
     }
 
-    fn sign_req(&self, req: RequestBuilder, method: Method, path: &str, params: &HashMap<&str, &str>) -> RequestBuilder {
+    fn sign_req(
+        &self,
+        req: RequestBuilder,
+        method: Method,
+        path: &str,
+        params: &HashMap<&str, &str>,
+    ) -> RequestBuilder {
         let now = Local::now().to_rfc2822();
         let method = method.as_str();
         let api_host_name = self.api_host_name.to_lowercase();
@@ -135,9 +163,7 @@ impl DuoClient {
 
         let basic_auth = basic_auth_for_canon(&self.integration_key, &self.secret_key, &canon);
 
-        req
-            .header("Date", &now)
-            .header("Authorization", &basic_auth)
+        req.header("Date", &now).header("Authorization", &basic_auth)
     }
 }
 
@@ -160,10 +186,7 @@ fn basic_auth_for_canon(integration_key: &str, secret_key: &str, canon: &[&str])
     let mut s_ctx = hmac::Context::with_key(&s_key);
     s_ctx.update(canon.as_bytes());
     let sig = s_ctx.sign();
-    let auth = format!("{}:{}",
-                       integration_key,
-                       hex::encode(sig.as_ref())
-    );
+    let auth = format!("{}:{}", integration_key, hex::encode(sig.as_ref()));
     trace!("Auth: '{}'", auth);
 
     let basic_auth = format!("Basic {}", base64::encode(&auth));
@@ -185,8 +208,8 @@ pub struct User {
 }
 
 fn from_unix_timestamp<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
-    where
-        D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     let timestamp: Option<i64> = Option::deserialize(deserializer)?;
     let utc = timestamp
@@ -275,16 +298,18 @@ mod tests {
 
         let api_host_name = env::var_os("DUO_API_HOST_NAME")
             .expect("Environment variable 'DUO_API_HOST_NAME' is not set.")
-            .to_string_lossy().to_string();
+            .to_string_lossy()
+            .to_string();
         let integration_key = env::var_os("DUO_INTEGRATION_KEY")
             .expect("Environment variable 'DUO_INTEGRATION_KEY' is not set.")
-            .to_string_lossy().to_string();
+            .to_string_lossy()
+            .to_string();
         let secret_key = env::var_os("DUO_SECRET_KEY")
             .expect("Environment variable 'DUO_SECRET_KEY' is not set.")
-            .to_string_lossy().to_string();
+            .to_string_lossy()
+            .to_string();
 
-        let client = DuoClient::new(api_host_name, integration_key, secret_key)
-            .expect("Failed to create Duo Client");
+        let client = DuoClient::new(api_host_name, integration_key, secret_key).expect("Failed to create Duo Client");
 
         let response = client.get_users();
 
@@ -293,7 +318,6 @@ mod tests {
         debug!("{:#?}", response)
     }
 
-
     #[test]
     #[ignore]
     fn disable_user() {
@@ -301,19 +325,22 @@ mod tests {
 
         let user_id = env::var_os("DUO_USER_ID")
             .expect("Environment variable 'DUO_USER_ID' is not set.")
-            .to_string_lossy().to_string();
+            .to_string_lossy()
+            .to_string();
         let api_host_name = env::var_os("DUO_API_HOST_NAME")
             .expect("Environment variable 'DUO_API_HOST_NAME' is not set.")
-            .to_string_lossy().to_string();
+            .to_string_lossy()
+            .to_string();
         let integration_key = env::var_os("DUO_INTEGRATION_KEY")
             .expect("Environment variable 'DUO_INTEGRATION_KEY' is not set.")
-            .to_string_lossy().to_string();
+            .to_string_lossy()
+            .to_string();
         let secret_key = env::var_os("DUO_SECRET_KEY")
             .expect("Environment variable 'DUO_SECRET_KEY' is not set.")
-            .to_string_lossy().to_string();
+            .to_string_lossy()
+            .to_string();
 
-        let client = DuoClient::new(api_host_name, integration_key, secret_key)
-            .expect("Failed to create Duo Client");
+        let client = DuoClient::new(api_host_name, integration_key, secret_key).expect("Failed to create Duo Client");
 
         let response = client.disable_user(user_id);
 

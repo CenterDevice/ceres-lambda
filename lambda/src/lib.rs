@@ -8,11 +8,11 @@ pub mod error;
 pub mod metrics;
 
 pub struct FunctionVersion {
-     pub git_commit_sha: &'static str,
-     pub git_commit_date: &'static str,
-     pub git_version: &'static str,
-     pub cargo_version: &'static str,
-     pub build_timestamp: &'static str,
+    pub git_commit_sha: &'static str,
+    pub git_commit_date: &'static str,
+    pub git_version: &'static str,
+    pub cargo_version: &'static str,
+    pub build_timestamp: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -34,7 +34,12 @@ impl<'a, T> LambdaResult<'a, T>
 where
     T: serde::Serialize,
 {
-    pub fn from_ctx(ctx: &'a Context, function_version: &FunctionVersion, error_msg: Option<String>, details: Option<&'a T>) -> LambdaResult<'a, T> {
+    pub fn from_ctx(
+        ctx: &'a Context,
+        function_version: &FunctionVersion,
+        error_msg: Option<String>,
+        details: Option<&'a T>,
+    ) -> LambdaResult<'a, T> {
         LambdaResult {
             function_name: &ctx.function_name,
             function_version: &ctx.function_version,

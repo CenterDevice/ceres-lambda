@@ -1,5 +1,5 @@
 use crate::{config::FunctionConfig, error::AwsScaleTowerError};
-use aws::{AwsClientConfig,};
+use aws::AwsClientConfig;
 use bosun::{Bosun, Datum, Tags};
 use failure::{Error, Fail};
 use lambda_runtime::Context;
@@ -26,9 +26,7 @@ pub enum HandleResult {
     #[serde(rename = "empty")]
     Empty,
     #[serde(rename = "cron")]
-    Cron {
-        burst_balance: usize,
-    },
+    Cron { burst_balance: usize },
     #[serde(rename = "ping")]
     Ping { echo_reply: String },
 }

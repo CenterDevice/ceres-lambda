@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 
-use aws::AwsClientConfig;
 use aws::iam;
 use aws::iam::AccessKeyLastUsed;
+use aws::AwsClientConfig;
 use duo::{Duo, DuoClient, DuoResponse};
 
 #[derive(Debug)]
@@ -60,52 +60,55 @@ pub enum CredentialType {
     TwoFA,
 }
 
-pub fn check_aws_credentials(
-    aws_client_config: &AwsClientConfig,
-) -> Result<Vec<CredentialCheck>, Error> {
+pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<CredentialCheck>, Error> {
     let users = iam::list_users(&aws_client_config)?;
 
     let mut credentials: Vec<CredentialCheck> = Vec::new();
 
-    let user_credentials: Vec<Credential> = users.clone().into_iter()
-        .map(Into::into)
-        .collect();
-    let _ = user_credentials.into_iter()
+    let user_credentials: Vec<Credential> = users.clone().into_iter().map(Into::into).collect();
+    let _ = user_credentials
+        .into_iter()
         .map(|x| CredentialCheck::Aws { credential: x })
-        .map(|x| credentials.push(x)).collect::<Vec<_>>();
+        .map(|x| credentials.push(x))
+        .collect::<Vec<_>>();
 
-    let access_keys: Vec<_> = users.into_iter()
+    let access_keys: Vec<_> = users
+        .into_iter()
         .map(|x| x.user_name)
-        .map(|x| {
-            iam::list_access_keys_for_user(&aws_client_config, x)
-        })
+        .map(|x| iam::list_access_keys_for_user(&aws_client_config, x))
         .flatten()
         .flatten()
         .map(|x| iam::list_access_last_used(&aws_client_config, x.user_name.clone(), x.access_key_id))
         .filter(|x| x.is_ok())
         .flatten()
         .collect();
-    let _ = access_keys.into_iter()
+    let _ = access_keys
+        .into_iter()
         .map(Into::into)
         .map(|x| CredentialCheck::Aws { credential: x })
-        .map(|x| credentials.push(x)).collect::<Vec<_>>();
+        .map(|x| credentials.push(x))
+        .collect::<Vec<_>>();
 
     Ok(credentials)
 }
 
-pub fn check_duo_credentials(
-    duo_client: &DuoClient,
-) -> Result<Vec<CredentialCheck>, Error> {
+pub fn check_duo_credentials(duo_client: &DuoClient) -> Result<Vec<CredentialCheck>, Error> {
     let response = duo_client.get_users()?;
     match response {
         DuoResponse::Ok { response: users } => Ok(users
             .into_iter()
             .map(Into::into)
             .map(|x| CredentialCheck::Duo { credential: x })
-            .collect()
-        ),
-        DuoResponse::Fail { code, message, message_detail } => {
-            let msg = format!("failed to get Duo users (code: {}) because {}, {}", code, message, message_detail);
+            .collect()),
+        DuoResponse::Fail {
+            code,
+            message,
+            message_detail,
+        } => {
+            let msg = format!(
+                "failed to get Duo users (code: {}) because {}, {}",
+                code, message, message_detail
+            );
             Err(err_msg(msg))
         }
     }

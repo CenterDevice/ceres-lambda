@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub mod burst_balance;
 pub mod config;
-pub mod events;
 pub mod error;
+pub mod events;
 pub mod metrics;
 
 static FUNCTION_VERSION: lambda::FunctionVersion = FunctionVersion {

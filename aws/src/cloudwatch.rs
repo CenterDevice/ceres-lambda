@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-use chrono::{Duration, prelude::*};
+use chrono::{prelude::*, Duration};
 use failure::Error;
 use log::{debug, trace};
 use rusoto_cloudwatch::{

@@ -1,10 +1,10 @@
 use crate::AwsClientConfig;
-use failure::{Error, err_msg};
-use log::{debug, warn};
-use rusoto_iam::{Iam, IamClient, ListUsersRequest, ListAccessKeysRequest, GetAccessKeyLastUsedRequest};
 use chrono::{DateTime, Utc};
-use std::str::FromStr;
+use failure::{err_msg, Error};
+use log::{debug, warn};
+use rusoto_iam::{GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersRequest};
 use std::convert::TryFrom;
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -16,7 +16,8 @@ pub struct User {
 
 impl From<rusoto_iam::User> for User {
     fn from(user: rusoto_iam::User) -> Self {
-        let password_last_used = user.password_last_used
+        let password_last_used = user
+            .password_last_used
             .and_then(|x| DateTime::parse_from_rfc3339(&x).ok())
             .map(|x| x.with_timezone(&Utc));
 
@@ -49,9 +50,7 @@ pub fn list_users(aws_client_config: &AwsClientConfig) -> Result<Vec<User>, Erro
         warn!("List users: Result is truncated.");
     }
 
-    let res: Vec<User> = res.users.into_iter()
-        .map(Into::into)
-        .collect();
+    let res: Vec<User> = res.users.into_iter().map(Into::into).collect();
 
     Ok(res)
 }
@@ -69,13 +68,13 @@ impl TryFrom<rusoto_iam::AccessKeyMetadata> for AccessKeyMetadata {
 
     fn try_from(value: rusoto_iam::AccessKeyMetadata) -> Result<Self, Self::Error> {
         let access_key_id = value.access_key_id.ok_or_else(|| err_msg("no access key provided"))?;
-        let create_date = value.create_date
+        let create_date = value
+            .create_date
             .ok_or_else(|| err_msg("no create date provided"))
-            .and_then(|x|
-                DateTime::parse_from_rfc3339(&x).map_err(|_| err_msg("failed to parse create date"))
-            )
+            .and_then(|x| DateTime::parse_from_rfc3339(&x).map_err(|_| err_msg("failed to parse create date")))
             .map(|x| x.with_timezone(&Utc))?;
-        let status = value.status
+        let status = value
+            .status
             .ok_or_else(|| err_msg("no status provided"))
             .and_then(|x| AccessKeyMetadataStatus::from_str(&x))?;
         let user_name = value.user_name.ok_or_else(|| err_msg("no user name provided"))?;
@@ -84,7 +83,7 @@ impl TryFrom<rusoto_iam::AccessKeyMetadata> for AccessKeyMetadata {
             access_key_id,
             create_date,
             status,
-            user_name
+            user_name,
         })
     }
 }
@@ -102,12 +101,15 @@ impl FromStr for AccessKeyMetadataStatus {
         match s.to_lowercase().as_str() {
             "active" => Ok(AccessKeyMetadataStatus::Active),
             "inactive" => Ok(AccessKeyMetadataStatus::Inactive),
-            _ => Err(err_msg("failed to parse access key status"))
+            _ => Err(err_msg("failed to parse access key status")),
         }
     }
 }
 
-pub fn list_access_keys_for_user(aws_client_config: &AwsClientConfig, user_name: String) -> Result<Vec<AccessKeyMetadata>, Error> {
+pub fn list_access_keys_for_user(
+    aws_client_config: &AwsClientConfig,
+    user_name: String,
+) -> Result<Vec<AccessKeyMetadata>, Error> {
     debug!("List access keys for user '{}'", &user_name);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
@@ -120,16 +122,19 @@ pub fn list_access_keys_for_user(aws_client_config: &AwsClientConfig, user_name:
         user_name: Some(user_name.clone()),
     };
     let res = iam.list_access_keys(request).sync();
-    debug!("Finished list access keys request for user '{}'; success={}.", &user_name, res.is_ok());
+    debug!(
+        "Finished list access keys request for user '{}'; success={}.",
+        &user_name,
+        res.is_ok()
+    );
     let res = res?;
 
     if log::max_level() >= log::Level::Warn && res.is_truncated.is_some() && res.is_truncated.unwrap() {
         warn!("List users: Result is truncated.");
     }
 
-    let res: Vec<Result<AccessKeyMetadata, Error>> = res.access_key_metadata.into_iter()
-        .map(TryFrom::try_from)
-        .collect();
+    let res: Vec<Result<AccessKeyMetadata, Error>> =
+        res.access_key_metadata.into_iter().map(TryFrom::try_from).collect();
     let res: Result<Vec<AccessKeyMetadata>, Error> = res.into_iter().collect();
 
     res
@@ -160,7 +165,11 @@ impl AccessKeyLastUsed {
     }
 }
 
-pub fn list_access_last_used(aws_client_config: &AwsClientConfig, user_name: String, access_key_id: String) -> Result<AccessKeyLastUsed, Error> {
+pub fn list_access_last_used(
+    aws_client_config: &AwsClientConfig,
+    user_name: String,
+    access_key_id: String,
+) -> Result<AccessKeyLastUsed, Error> {
     debug!("Get access key last used for key '{}'", &access_key_id);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
@@ -172,7 +181,11 @@ pub fn list_access_last_used(aws_client_config: &AwsClientConfig, user_name: Str
     };
 
     let res = iam.get_access_key_last_used(request).sync();
-    debug!("Finished get access key last used for key '{}'; success={}.", &access_key_id, res.is_ok());
+    debug!(
+        "Finished get access key last used for key '{}'; success={}.",
+        &access_key_id,
+        res.is_ok()
+    );
     let res = res?.access_key_last_used.ok_or_else(|| err_msg("no result received"))?;
 
     AccessKeyLastUsed::try_from(user_name, access_key_id, res)
