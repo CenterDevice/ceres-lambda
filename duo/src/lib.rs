@@ -1,12 +1,11 @@
-use std::sync::Arc;
-use std::time::Duration;
-
-use chrono::Local;
+use chrono::{Local, DateTime, Utc, NaiveDateTime};
 use failure::Fail;
 use log::{debug, info, trace};
 use reqwest::{Method, RequestBuilder, StatusCode};
 use ring::hmac;
-use std::io::Read;
+use serde::{de::DeserializeOwned, Deserialize, Deserializer};
+use std::sync::Arc;
+use std::time::Duration;
 
 /// Result of an attempt to send meta data or a metric datum
 pub type DuoResult<T> = Result<T, DuoError>;
@@ -15,8 +14,8 @@ pub type DuoResult<T> = Result<T, DuoError>;
 #[derive(Debug, Fail)]
 pub enum DuoError {
     /// Failed to create JSON.
-    #[fail(display = "failed to parse JSON")]
-    JsonParseError,
+    #[fail(display = "failed to parse JSON because {}", _0)]
+    JsonParseError(String),
     /// Failed to create Client
     #[fail(display = "failed create client because {}", _0)]
     ClientError(String),
@@ -26,6 +25,15 @@ pub enum DuoError {
     /// Failed to read from Duo
     #[fail(display = "failed to process Duo response because {}", _0)]
     ReceiveError(String),
+}
+
+/// Generic Duo Response
+#[derive(Debug, Deserialize)]
+#[serde(tag = "stat")]
+#[serde(rename_all = "UPPERCASE")]
+pub enum DuoResponse<T> {
+    Ok { response: T },
+    Fail { code: usize, message: String, message_detail: String },
 }
 
 /// Encapsulates Duo server connection.
@@ -58,19 +66,26 @@ impl DuoClient {
         })
     }
 
-    fn send_to_duo_api(&self, path: &str, expected: StatusCode) -> DuoResult<()> {
+    fn send_to_duo_api<T: DeserializeOwned>(&self, path: &str, expected: StatusCode) -> DuoResult<DuoResponse<T>> {
         let uri = format!("https://{}{}", self.api_host_name, path);
 
         let req = self.client
             .get(&uri)
             //.header("Content-Type", "application/x-www-form-urlencoded");
-        ;
+            ;
         let req = self.sign_req(req, Method::GET, path);
         debug!("Request: '{:?}'", req);
 
         let res = req.send();
         match res {
-            Ok(ref response) if response.status() == expected => Ok(()),
+            Ok(mut response) if response.status() == expected => {
+                let text = response.text()
+                    .map_err(|_| DuoError::ReceiveError("failed to read response body".to_string()))?;
+                trace!("Answer: '{}'", text);
+                let data = serde_json::from_str::<DuoResponse<T>>(&text)
+                    .map_err(|e| DuoError::JsonParseError(e.to_string()))?;
+                Ok(data)
+            }
             Ok(response) => Err(DuoError::ReceiveError(format!("{}", response.status()))),
             Err(err) => Err(DuoError::SendError(format!("{}", err))),
         }
@@ -111,16 +126,49 @@ fn basic_auth_for_canon(integration_key: &str, secret_key: &str, canon: &[&str])
     basic_auth
 }
 
+#[derive(Debug, Deserialize)]
+pub struct User {
+    pub user_id: String,
+    pub username: String,
+    pub realname: Option<String>,
+    pub email: String,
+    pub is_enrolled: bool,
+    pub status: UserStatus,
+    #[serde(deserialize_with = "from_unix_timestamp")]
+    pub last_login: Option<DateTime<Utc>>,
+}
+
+fn from_unix_timestamp<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+where
+    D: Deserializer<'de>
+{
+    let timestamp: Option<i64> = Option::deserialize(deserializer)?;
+    let utc = timestamp
+        .map(|x| NaiveDateTime::from_timestamp(x, 0))
+        .map(|x| DateTime::from_utc(x, Utc));
+
+    Ok(utc)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UserStatus {
+    Active,
+    Bypass,
+    Disabled,
+    #[serde(rename = "locked out")]
+    LockedOut,
+    #[serde(rename = "pending deletion")]
+    PendingDeletion,
+}
+
 pub trait Duo {
-    fn get_users(&self) -> DuoResult<()>;
+    fn get_users(&self) -> DuoResult<DuoResponse<Vec<User>>>;
 }
 
 impl Duo for DuoClient {
-    fn get_users(&self) -> DuoResult<()> {
-        let res = self.send_to_duo_api("/admin/v1/users", StatusCode::OK);
-
-        eprintln!("Res: {:?}", res);
-        res
+    fn get_users(&self) -> DuoResult<DuoResponse<Vec<User>>> {
+        self.send_to_duo_api("/admin/v1/users", StatusCode::OK)
     }
 }
 
@@ -131,7 +179,6 @@ mod tests {
     use spectral::prelude::*;
 
     use super::*;
-
 
     #[test]
     fn basic_auth_for_canon_test() {
@@ -152,10 +199,10 @@ mod tests {
         let basic_auth = basic_auth_for_canon(integration_key, secret_key, &canon);
 
         assert_that(&basic_auth.as_str()).is_equal_to(&expected);
-
     }
 
     #[test]
+    #[ignore]
     fn get_users() {
         testing::setup();
 
@@ -176,5 +223,6 @@ mod tests {
 
         assert_that(&response).is_ok();
         let response = response.expect("Request failed");
+        debug!("{:#?}", response)
     }
 }
