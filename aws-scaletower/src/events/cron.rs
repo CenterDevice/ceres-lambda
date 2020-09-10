@@ -66,15 +66,15 @@ pub fn burst_balance<T: Bosun>(
     let forecasts = get_burst_balances(&aws_client_config, start, end, None, filters)?;
     debug!("Received burst balances: {:?}", forecasts);
 
-    let candidates: Vec<_> = forecasts.into_iter().filter(|x| x.is_exhausted(config)).collect();
-    debug!("Burst balance: Identified candidates: '{:?}'", candidates);
-
-    if log::max_level() > log::Level::Info {
-        for c in &candidates {
-            info!("Candidate {} with balance {:?} (limit: {}) and forecast {:?} (limit: {}) selected for termination (use eta: {}).",
-                  c.instance_id, c.balance, config.burst_balance_limit, c.forecast, config.eta_limit_min, config.use_linear_regression);
+    if log::max_level() >= log::Level::Info {
+        for f in &forecasts {
+            info!("Instance {} with balance {:?} (limit: {}) and forecast {:?} (limit: {}) found (use eta: {}).",
+                  f.instance_id, f.balance, config.burst_balance_limit, f.forecast, config.eta_limit_min, config.use_linear_regression);
         }
     }
+
+    let candidates: Vec<_> = forecasts.into_iter().filter(|x| x.is_exhausted(config)).collect();
+    debug!("Burst balance: Identified candidates: '{:?}'", candidates);
 
     let instances: Vec<_> = candidates.into_iter().map(|x| x.instance_id).collect();
     info!(
@@ -84,12 +84,16 @@ pub fn burst_balance<T: Bosun>(
     );
     bosun_emit_candidates(bosun, instances.len())?;
 
-    if config.terminate {
-        aws::ec2::ec2::terminate_instances(aws_client_config, instances.clone())?;
-        info!("Terminated {} instances: '{:?}'", instances.len(), instances);
-        bosun_emit_terminated(bosun, instances.len())?;
+    if !instances.is_empty() {
+        if config.terminate {
+            aws::ec2::ec2::terminate_instances(aws_client_config, instances.clone())?;
+            info!("Terminated {} instances: '{:?}'", instances.len(), instances);
+            bosun_emit_terminated(bosun, instances.len())?;
+        } else {
+            info!("Would have terminated {} instances: '{:?}'", instances.len(), instances);
+        }
     } else {
-        info!("Would have terminated {} instances: '{:?}'", instances.len(), instances);
+        info!("No candidates found, nothing to do.")
     }
 
     Ok(instances.len())
