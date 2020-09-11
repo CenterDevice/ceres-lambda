@@ -2,9 +2,9 @@ use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 
 use aws::iam;
-use aws::iam::AccessKeyLastUsed;
+use aws::iam::{AccessKeyLastUsed, AccessKeyMetadataStatus};
 use aws::AwsClientConfig;
-use duo::{Duo, DuoClient, DuoResponse};
+use duo::{Duo, DuoClient, DuoResponse, UserStatus};
 
 #[derive(Debug)]
 pub enum CredentialCheck {
@@ -17,7 +17,9 @@ pub struct Credential {
     pub id: String,
     pub user_name: String,
     pub credential: CredentialType,
+    pub state: CredentialStatus,
     pub last_used: Option<DateTime<Utc>>,
+    pub link_id: Option<String>,
 }
 
 impl From<iam::User> for Credential {
@@ -26,7 +28,9 @@ impl From<iam::User> for Credential {
             id: user.user_id,
             user_name: user.user_name,
             credential: CredentialType::Password,
+            state: CredentialStatus::Unknown,
             last_used: user.password_last_used,
+            link_id: None,
         }
     }
 }
@@ -37,7 +41,12 @@ impl From<iam::AccessKeyLastUsed> for Credential {
             id: key.access_key_id,
             user_name: key.user_name,
             credential: CredentialType::ApiKey,
+            state: match key.status {
+                AccessKeyMetadataStatus::Active => CredentialStatus::Enabled,
+                AccessKeyMetadataStatus::Inactive => CredentialStatus::Disabled,
+            },
             last_used: Some(key.last_used_date),
+            link_id: Some(key.user_id),
         }
     }
 }
@@ -48,7 +57,14 @@ impl From<duo::User> for Credential {
             id: user.user_id.clone(),
             user_name: user.realname.clone().unwrap_or_else(|| "-".to_string()),
             credential: CredentialType::TwoFA,
+            state: match user.status {
+                UserStatus::Active | UserStatus::Bypass => CredentialStatus::Enabled,
+                UserStatus::Disabled | UserStatus::LockedOut | UserStatus::PendingDeletion => {
+                    CredentialStatus::Disabled
+                }
+            },
             last_used: user.last_login,
+            link_id: None,
         }
     }
 }
@@ -58,6 +74,13 @@ pub enum CredentialType {
     Password,
     ApiKey,
     TwoFA,
+}
+
+#[derive(Debug)]
+pub enum CredentialStatus {
+    Enabled,
+    Disabled,
+    Unknown,
 }
 
 pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<CredentialCheck>, Error> {
@@ -74,11 +97,10 @@ pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<
 
     let access_keys: Vec<_> = users
         .into_iter()
-        .map(|x| x.user_name)
         .map(|x| iam::list_access_keys_for_user(&aws_client_config, x))
         .flatten()
         .flatten()
-        .map(|x| iam::list_access_last_used(&aws_client_config, x.user_name.clone(), x.access_key_id))
+        .map(|x| iam::list_access_last_used(&aws_client_config, x))
         .filter(|x| x.is_ok())
         .flatten()
         .collect();

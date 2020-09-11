@@ -25,9 +25,9 @@ fn main() {
         .to_string_lossy()
         .to_string();
     let duo_client = DuoClient::new(api_host_name, integration_key, secret_key).expect("Failed to create Duo client");
-    let mut credentials = check_duo_credentials(&duo_client).expect("Failed to get Duo credentials");
-
     let aws_client_config = AwsClientConfig::with_region(Region::UsEast1).expect("Failed to create AWS client config");
+
+    let mut credentials = check_duo_credentials(&duo_client).expect("Failed to get Duo credentials");
     let aws_redentials = check_aws_credentials(&aws_client_config).expect("failed to load credentials");
     credentials.extend(aws_redentials);
 
@@ -36,7 +36,9 @@ fn main() {
     table.set_titles(Row::new(vec![
         Cell::new("Service"),
         Cell::new("User"),
+        Cell::new("Link Id"),
         Cell::new("Credential Type"),
+        Cell::new("State"),
         Cell::new("Last Time Used"),
         Cell::new("Last Usage [days]"),
         Cell::new("> 2 Months"),
@@ -56,7 +58,9 @@ fn main() {
 
 fn credential_to_row(service: &str, credential: &Credential) -> Row {
     let user = format!("{} ({})", credential.user_name, credential.id);
+    let link_id = credential.link_id.as_deref().unwrap_or_else(|| "-");
     let credential_type = format!("{:?}", credential.credential);
+    let credential_state = format!("{:?}", credential.state);
     let last_time_used = credential
         .last_used
         .map(|x| x.to_rfc3339())
@@ -75,8 +79,10 @@ fn credential_to_row(service: &str, credential: &Credential) -> Row {
     Row::new(vec![
         Cell::new(service),
         Cell::new(&user),
+        Cell::new(&link_id).style_spec("c"),
         Cell::new(&credential_type),
-        Cell::new(&last_time_used),
+        Cell::new(&credential_state),
+        Cell::new(&last_time_used).style_spec("c"),
         Cell::new(&last_usage).style_spec("r"),
         Cell::new(&last_usage_is_2_months).style_spec("c"),
         Cell::new(&last_usage_is_6_months).style_spec("c"),

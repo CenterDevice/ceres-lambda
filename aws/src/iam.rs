@@ -3,7 +3,6 @@ use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 use log::{debug, warn};
 use rusoto_iam::{GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersRequest};
-use std::convert::TryFrom;
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -61,12 +60,11 @@ pub struct AccessKeyMetadata {
     pub create_date: DateTime<Utc>,
     pub status: AccessKeyMetadataStatus,
     pub user_name: String,
+    pub user_id: String,
 }
 
-impl TryFrom<rusoto_iam::AccessKeyMetadata> for AccessKeyMetadata {
-    type Error = Error;
-
-    fn try_from(value: rusoto_iam::AccessKeyMetadata) -> Result<Self, Self::Error> {
+impl AccessKeyMetadata {
+    fn try_from(user_id: String, value: rusoto_iam::AccessKeyMetadata) -> Result<Self, Error> {
         let access_key_id = value.access_key_id.ok_or_else(|| err_msg("no access key provided"))?;
         let create_date = value
             .create_date
@@ -84,6 +82,7 @@ impl TryFrom<rusoto_iam::AccessKeyMetadata> for AccessKeyMetadata {
             create_date,
             status,
             user_name,
+            user_id,
         })
     }
 }
@@ -108,9 +107,9 @@ impl FromStr for AccessKeyMetadataStatus {
 
 pub fn list_access_keys_for_user(
     aws_client_config: &AwsClientConfig,
-    user_name: String,
+    user: User,
 ) -> Result<Vec<AccessKeyMetadata>, Error> {
-    debug!("List access keys for user '{}'", &user_name);
+    debug!("List access keys for user '{}'", &user.user_name);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
     let http_client = aws_client_config.http_client.clone();
@@ -119,12 +118,12 @@ pub fn list_access_keys_for_user(
     let request = ListAccessKeysRequest {
         marker: None,
         max_items: Some(100),
-        user_name: Some(user_name.clone()),
+        user_name: Some(user.user_name.clone()),
     };
     let res = iam.list_access_keys(request).sync();
     debug!(
         "Finished list access keys request for user '{}'; success={}.",
-        &user_name,
+        &user.user_name,
         res.is_ok()
     );
     let res = res?;
@@ -134,7 +133,7 @@ pub fn list_access_keys_for_user(
     }
 
     let res: Vec<Result<AccessKeyMetadata, Error>> =
-        res.access_key_metadata.into_iter().map(TryFrom::try_from).collect();
+        res.access_key_metadata.into_iter().map(|x| AccessKeyMetadata::try_from(user.user_id.clone(), x)).collect();
     let res: Result<Vec<AccessKeyMetadata>, Error> = res.into_iter().collect();
 
     res
@@ -143,21 +142,25 @@ pub fn list_access_keys_for_user(
 #[derive(Debug, Clone)]
 pub struct AccessKeyLastUsed {
     pub user_name: String,
+    pub user_id: String,
     pub access_key_id: String,
+    pub status: AccessKeyMetadataStatus,
     pub last_used_date: DateTime<Utc>,
     pub region: String,
     pub service_name: String,
 }
 
 impl AccessKeyLastUsed {
-    fn try_from(user_name: String, access_key_id: String, value: rusoto_iam::AccessKeyLastUsed) -> Result<Self, Error> {
+    fn try_from(access_key: AccessKeyMetadata, value: rusoto_iam::AccessKeyLastUsed) -> Result<Self, Error> {
         let last_used_date = DateTime::parse_from_rfc3339(&value.last_used_date)
             .map_err(|_| err_msg("failed to parse create date"))
             .map(|x| x.with_timezone(&Utc))?;
 
         Ok(AccessKeyLastUsed {
-            user_name,
-            access_key_id,
+            user_name: access_key.user_name,
+            user_id: access_key.user_id,
+            access_key_id: access_key.access_key_id,
+            status: access_key.status,
             last_used_date,
             region: value.region,
             service_name: value.service_name,
@@ -167,26 +170,25 @@ impl AccessKeyLastUsed {
 
 pub fn list_access_last_used(
     aws_client_config: &AwsClientConfig,
-    user_name: String,
-    access_key_id: String,
+    access_key: AccessKeyMetadata
 ) -> Result<AccessKeyLastUsed, Error> {
-    debug!("Get access key last used for key '{}'", &access_key_id);
+    debug!("Get access key last used for key '{}'", &access_key.access_key_id);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
     let http_client = aws_client_config.http_client.clone();
     let iam = IamClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
     let request = GetAccessKeyLastUsedRequest {
-        access_key_id: access_key_id.clone(),
+        access_key_id: access_key.access_key_id.clone(),
     };
 
     let res = iam.get_access_key_last_used(request).sync();
     debug!(
         "Finished get access key last used for key '{}'; success={}.",
-        &access_key_id,
+        &access_key.access_key_id,
         res.is_ok()
     );
     let res = res?.access_key_last_used.ok_or_else(|| err_msg("no result received"))?;
 
-    AccessKeyLastUsed::try_from(user_name, access_key_id, res)
+    AccessKeyLastUsed::try_from(access_key, res)
 }

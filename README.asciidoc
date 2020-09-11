@@ -11,5 +11,5 @@ image:https://dev.azure.com/centerdevice/ceres-lambda/_apis/build/status/CenterD
 
 * `aws-scaletower` -- Checks EC2 instances for running out of IO burst balance. If a burst balance below a threshold or with predicted time until the balance is exhausted is identified, the EC2 instance will be terminated and automatically replaced by the corresponding autoscaling group.
 
-* `credentials-watchtower` -- Checks credentials at DUO and AWS for last time used. If credentials with a longer period if inactivity are identified, those credentials will be destroyed.
+* `security-watchtower` -- Checks credentials at DUO and AWS for last time used. If credentials with a longer period if inactivity are identified, those credentials will be destroyed.
 
