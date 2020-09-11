@@ -1,13 +1,15 @@
+use std::env;
+
 use chrono::prelude::*;
 use prettytable::{format, Cell, Row, Table};
 use rusoto_core::Region;
 
 use aws::AwsClientConfig;
 use credentials_watchtower::check_credentials::{
-    check_aws_credentials, check_duo_credentials, Credential, CredentialCheck,
+    check_aws_credentials, check_duo_credentials, Credential, CredentialCheck, IdentifyInactive, InactiveAction,
+    InactiveCredential, InactiveSpec,
 };
 use duo::DuoClient;
-use std::env;
 
 fn main() {
     env_logger::init();
@@ -31,12 +33,26 @@ fn main() {
     let aws_redentials = check_aws_credentials(&aws_client_config).expect("failed to load credentials");
     credentials.extend(aws_redentials);
 
+    print_credentials(&credentials);
+
+    let inactive_spec = InactiveSpec {
+        notification_offset: 14,
+        disable_threshold_days: 60,
+        delete_threshold_days: 180,
+    };
+
+    let inactives = credentials.identify_inactive(&inactive_spec);
+    print_inactives(&inactives);
+}
+
+fn print_credentials(credentials: &[CredentialCheck]) {
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
     table.set_titles(Row::new(vec![
         Cell::new("Service"),
         Cell::new("User"),
-        Cell::new("Link Id"),
+        Cell::new("Id"),
+        Cell::new("Linked Id"),
         Cell::new("Credential Type"),
         Cell::new("State"),
         Cell::new("Last Time Used"),
@@ -45,7 +61,7 @@ fn main() {
         Cell::new("> 6 Months"),
     ]));
 
-    for c in &credentials {
+    for c in credentials {
         let row = match c {
             CredentialCheck::Aws { credential } => credential_to_row("AWS", credential),
             CredentialCheck::Duo { credential } => credential_to_row("Duo", credential),
@@ -57,8 +73,9 @@ fn main() {
 }
 
 fn credential_to_row(service: &str, credential: &Credential) -> Row {
-    let user = format!("{} ({})", credential.user_name, credential.id);
-    let link_id = credential.link_id.as_deref().unwrap_or_else(|| "-");
+    let user_name = &credential.user_name;
+    let id = &credential.id;
+    let link_id = credential.linked_id.as_deref().unwrap_or_else(|| "-");
     let credential_type = format!("{:?}", credential.credential);
     let credential_state = format!("{:?}", credential.state);
     let last_time_used = credential
@@ -78,7 +95,8 @@ fn credential_to_row(service: &str, credential: &Credential) -> Row {
 
     Row::new(vec![
         Cell::new(service),
-        Cell::new(&user),
+        Cell::new(&user_name),
+        Cell::new(&id),
         Cell::new(&link_id).style_spec("c"),
         Cell::new(&credential_type),
         Cell::new(&credential_state),
@@ -86,5 +104,45 @@ fn credential_to_row(service: &str, credential: &Credential) -> Row {
         Cell::new(&last_usage).style_spec("r"),
         Cell::new(&last_usage_is_2_months).style_spec("c"),
         Cell::new(&last_usage_is_6_months).style_spec("c"),
+    ])
+}
+
+fn print_inactives(credentials: &[InactiveCredential]) {
+    let mut table = Table::new();
+    table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+    table.set_titles(Row::new(vec![
+        Cell::new("Service"),
+        Cell::new("User"),
+        Cell::new("Id"),
+        Cell::new("Credential Type"),
+        Cell::new("State"),
+        Cell::new("Action"),
+    ]));
+
+    for c in credentials {
+        let row = match c.credential {
+            CredentialCheck::Aws { ref credential } => inactivity_to_row("AWS", credential, c.action),
+            CredentialCheck::Duo { ref credential } => inactivity_to_row("Duo", credential, c.action),
+        };
+        table.add_row(row);
+    }
+
+    table.printstd();
+}
+
+fn inactivity_to_row(service: &str, credential: &Credential, action: InactiveAction) -> Row {
+    let user_name = &credential.user_name;
+    let id = &credential.id;
+    let credential_type = format!("{:?}", credential.credential);
+    let credential_state = format!("{:?}", credential.state);
+    let action = format!("{:?}", action);
+
+    Row::new(vec![
+        Cell::new(service),
+        Cell::new(&user_name),
+        Cell::new(&id),
+        Cell::new(&credential_type),
+        Cell::new(&credential_state),
+        Cell::new(&action),
     ])
 }

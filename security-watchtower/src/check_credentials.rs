@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 
@@ -12,6 +14,22 @@ pub enum CredentialCheck {
     Duo { credential: Credential },
 }
 
+impl CredentialCheck {
+    pub fn id(&self) -> &str {
+        match self {
+            CredentialCheck::Aws { ref credential } => credential.id.as_str(),
+            CredentialCheck::Duo { ref credential } => credential.id.as_str(),
+        }
+    }
+
+    pub fn linked_id(&self) -> Option<&str> {
+        match self {
+            CredentialCheck::Aws { ref credential } => credential.linked_id.as_deref(),
+            CredentialCheck::Duo { ref credential } => credential.linked_id.as_deref(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Credential {
     pub id: String,
@@ -19,7 +37,7 @@ pub struct Credential {
     pub credential: CredentialType,
     pub state: CredentialStatus,
     pub last_used: Option<DateTime<Utc>>,
-    pub link_id: Option<String>,
+    pub linked_id: Option<String>,
 }
 
 impl From<iam::User> for Credential {
@@ -30,7 +48,7 @@ impl From<iam::User> for Credential {
             credential: CredentialType::Password,
             state: CredentialStatus::Unknown,
             last_used: user.password_last_used,
-            link_id: None,
+            linked_id: None,
         }
     }
 }
@@ -46,7 +64,7 @@ impl From<iam::AccessKeyLastUsed> for Credential {
                 AccessKeyMetadataStatus::Inactive => CredentialStatus::Disabled,
             },
             last_used: Some(key.last_used_date),
-            link_id: Some(key.user_id),
+            linked_id: Some(key.user_id),
         }
     }
 }
@@ -64,7 +82,7 @@ impl From<duo::User> for Credential {
                 }
             },
             last_used: user.last_login,
-            link_id: None,
+            linked_id: None,
         }
     }
 }
@@ -133,5 +151,107 @@ pub fn check_duo_credentials(duo_client: &DuoClient) -> Result<Vec<CredentialChe
             );
             Err(err_msg(msg))
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct InactiveSpec {
+    pub notification_offset: i64,
+    pub disable_threshold_days: i64,
+    pub delete_threshold_days: i64,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum InactiveAction {
+    Keep,
+    NotifyDisable,
+    Disable,
+    NotifyDelete,
+    Delete,
+    Unknown,
+}
+
+impl InactiveAction {
+    pub fn keep(&self) -> bool {
+        *self == InactiveAction::Keep
+    }
+}
+
+pub trait Inactive {
+    fn inactive_action(&self, spec: &InactiveSpec) -> InactiveAction;
+}
+
+impl Inactive for CredentialCheck {
+    fn inactive_action(&self, spec: &InactiveSpec) -> InactiveAction {
+        match self {
+            CredentialCheck::Aws { credential } => credential.inactive_action(spec),
+            CredentialCheck::Duo { credential } => credential.inactive_action(spec),
+        }
+    }
+}
+
+impl Inactive for Credential {
+    fn inactive_action(&self, spec: &InactiveSpec) -> InactiveAction {
+        if let Some(ref last_used) = self.last_used {
+            let since = (Utc::now() - *last_used).num_days();
+
+            if since > spec.delete_threshold_days {
+                return InactiveAction::Delete;
+            }
+            if since > spec.delete_threshold_days - spec.notification_offset {
+                return InactiveAction::NotifyDelete;
+            }
+            if since > spec.disable_threshold_days {
+                return InactiveAction::Disable;
+            }
+            if since > spec.disable_threshold_days - spec.notification_offset {
+                return InactiveAction::NotifyDisable;
+            }
+
+            InactiveAction::Keep
+        } else {
+            InactiveAction::Keep
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct InactiveCredential {
+    pub credential: CredentialCheck,
+    pub action: InactiveAction,
+}
+
+pub trait IdentifyInactive {
+    fn identify_inactive(self, spec: &InactiveSpec) -> Vec<InactiveCredential>;
+}
+
+impl IdentifyInactive for Vec<CredentialCheck> {
+    fn identify_inactive(self, spec: &InactiveSpec) -> Vec<InactiveCredential> {
+        let mut matrix: HashMap<String, InactiveAction> = HashMap::new();
+
+        for c in &self {
+            let action = c.inactive_action(spec);
+            matrix.insert(c.id().to_string(), action);
+            if let Some(link_id) = c.linked_id() {
+                matrix.insert(link_id.to_string(), action);
+            }
+        }
+
+        let inactive_ids: HashSet<&str> = matrix
+            .iter()
+            .filter(|(_, action)| !action.keep())
+            .map(|(id, _)| id.as_str())
+            .collect();
+
+        self.into_iter()
+            .filter(|c| inactive_ids.contains(c.id()))
+            .map(|c| {
+                let id = c.id().to_string();
+                InactiveCredential {
+                    credential: c,
+                    action: matrix[&id], // Safe, because id comes from self
+                }
+            })
+            .collect()
     }
 }
