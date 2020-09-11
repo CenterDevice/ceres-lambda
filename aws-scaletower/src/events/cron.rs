@@ -68,8 +68,15 @@ pub fn burst_balance<T: Bosun>(
 
     if log::max_level() >= log::Level::Info {
         for f in &forecasts {
-            info!("Instance {} with balance {:?} (limit: {}) and forecast {:?} (limit: {}) found (use eta: {}).",
-                  f.instance_id, f.balance, config.burst_balance_limit, f.forecast, config.eta_limit_min, config.use_linear_regression);
+            info!(
+                "Instance {} with balance {:?} (limit: {}) and forecast {:?} (limit: {}) found (use eta: {}).",
+                f.instance_id,
+                f.balance,
+                config.burst_balance_limit,
+                f.forecast,
+                config.eta_limit_min,
+                config.use_linear_regression
+            );
         }
     }
 
