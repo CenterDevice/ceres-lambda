@@ -32,7 +32,7 @@ stages:
           matrix:
             linux-nightly:
               imageName: ${{ variables.linux_image_name }}
-              rustup_toolchain: nightly
+              rustup_toolchain: stable
         pool:
           vmImage: $(imageName)
         steps:
