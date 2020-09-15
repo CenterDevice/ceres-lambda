@@ -8,30 +8,15 @@ use aws::iam::{AccessKeyLastUsed, AccessKeyMetadataStatus};
 use aws::AwsClientConfig;
 use duo::{Duo, DuoClient, DuoResponse, UserStatus};
 
-#[derive(Debug)]
-pub enum CredentialCheck {
-    Aws { credential: Credential },
-    Duo { credential: Credential },
+#[derive(Debug, Clone, Copy)]
+pub enum Service {
+    Aws,
+    Duo,
 }
 
-impl CredentialCheck {
-    pub fn id(&self) -> &str {
-        match self {
-            CredentialCheck::Aws { ref credential } => credential.id.as_str(),
-            CredentialCheck::Duo { ref credential } => credential.id.as_str(),
-        }
-    }
-
-    pub fn linked_id(&self) -> Option<&str> {
-        match self {
-            CredentialCheck::Aws { ref credential } => credential.linked_id.as_deref(),
-            CredentialCheck::Duo { ref credential } => credential.linked_id.as_deref(),
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Credential {
+    pub service: Service,
     pub id: String,
     pub user_name: String,
     pub credential: CredentialType,
@@ -40,9 +25,13 @@ pub struct Credential {
     pub linked_id: Option<String>,
 }
 
+impl Credential {
+}
+
 impl From<iam::User> for Credential {
     fn from(user: iam::User) -> Self {
         Credential {
+            service: Service::Aws,
             id: user.user_id,
             user_name: user.user_name,
             credential: CredentialType::Password,
@@ -56,6 +45,7 @@ impl From<iam::User> for Credential {
 impl From<iam::AccessKeyLastUsed> for Credential {
     fn from(key: AccessKeyLastUsed) -> Self {
         Credential {
+            service: Service::Aws,
             id: key.access_key_id,
             user_name: key.user_name,
             credential: CredentialType::ApiKey,
@@ -72,6 +62,7 @@ impl From<iam::AccessKeyLastUsed> for Credential {
 impl From<duo::User> for Credential {
     fn from(user: duo::User) -> Self {
         Credential {
+            service: Service::Duo,
             id: user.user_id.clone(),
             user_name: user.realname.clone().unwrap_or_else(|| "-".to_string()),
             credential: CredentialType::TwoFA,
@@ -87,31 +78,27 @@ impl From<duo::User> for Credential {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum CredentialType {
     Password,
     ApiKey,
     TwoFA,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum CredentialStatus {
     Enabled,
     Disabled,
     Unknown,
 }
 
-pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<CredentialCheck>, Error> {
+pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<Credential>, Error> {
     let users = iam::list_users(&aws_client_config)?;
 
-    let mut credentials: Vec<CredentialCheck> = Vec::new();
+    let mut credentials: Vec<Credential> = Vec::new();
 
     let user_credentials: Vec<Credential> = users.clone().into_iter().map(Into::into).collect();
-    let _ = user_credentials
-        .into_iter()
-        .map(|x| CredentialCheck::Aws { credential: x })
-        .map(|x| credentials.push(x))
-        .collect::<Vec<_>>();
+    credentials.append(&mut user_credentials.clone());
 
     let access_keys: Vec<_> = users
         .into_iter()
@@ -125,20 +112,18 @@ pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<
     let _ = access_keys
         .into_iter()
         .map(Into::into)
-        .map(|x| CredentialCheck::Aws { credential: x })
         .map(|x| credentials.push(x))
         .collect::<Vec<_>>();
 
     Ok(credentials)
 }
 
-pub fn check_duo_credentials(duo_client: &DuoClient) -> Result<Vec<CredentialCheck>, Error> {
+pub fn check_duo_credentials(duo_client: &DuoClient) -> Result<Vec<Credential>, Error> {
     let response = duo_client.get_users()?;
     match response {
         DuoResponse::Ok { response: users } => Ok(users
             .into_iter()
             .map(Into::into)
-            .map(|x| CredentialCheck::Duo { credential: x })
             .collect()),
         DuoResponse::Fail {
             code,
@@ -181,15 +166,6 @@ pub trait Inactive {
     fn inactive_action(&self, spec: &InactiveSpec) -> InactiveAction;
 }
 
-impl Inactive for CredentialCheck {
-    fn inactive_action(&self, spec: &InactiveSpec) -> InactiveAction {
-        match self {
-            CredentialCheck::Aws { credential } => credential.inactive_action(spec),
-            CredentialCheck::Duo { credential } => credential.inactive_action(spec),
-        }
-    }
-}
-
 impl Inactive for Credential {
     fn inactive_action(&self, spec: &InactiveSpec) -> InactiveAction {
         if let Some(ref last_used) = self.last_used {
@@ -217,7 +193,7 @@ impl Inactive for Credential {
 
 #[derive(Debug)]
 pub struct InactiveCredential {
-    pub credential: CredentialCheck,
+    pub credential: Credential,
     pub action: InactiveAction,
 }
 
@@ -225,14 +201,14 @@ pub trait IdentifyInactive {
     fn identify_inactive(self, spec: &InactiveSpec) -> Vec<InactiveCredential>;
 }
 
-impl IdentifyInactive for Vec<CredentialCheck> {
+impl IdentifyInactive for Vec<Credential> {
     fn identify_inactive(self, spec: &InactiveSpec) -> Vec<InactiveCredential> {
         let mut matrix: HashMap<String, InactiveAction> = HashMap::new();
 
         for c in &self {
             let action = c.inactive_action(spec);
-            matrix.insert(c.id().to_string(), action);
-            if let Some(link_id) = c.linked_id() {
+            matrix.insert(c.id.to_string(), action);
+            if let Some(ref link_id) = c.linked_id {
                 matrix.insert(link_id.to_string(), action);
             }
         }
@@ -244,9 +220,9 @@ impl IdentifyInactive for Vec<CredentialCheck> {
             .collect();
 
         self.into_iter()
-            .filter(|c| inactive_ids.contains(c.id()))
+            .filter(|c| inactive_ids.contains(c.id.as_str()))
             .map(|c| {
-                let id = c.id().to_string();
+                let id = c.id.to_string();
                 InactiveCredential {
                     credential: c,
                     action: matrix[&id], // Safe, because id comes from self

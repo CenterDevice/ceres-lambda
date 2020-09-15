@@ -6,8 +6,7 @@ use rusoto_core::Region;
 
 use aws::AwsClientConfig;
 use credentials_watchtower::check_credentials::{
-    check_aws_credentials, check_duo_credentials, Credential, CredentialCheck, IdentifyInactive, InactiveAction,
-    InactiveCredential, InactiveSpec,
+    check_aws_credentials, check_duo_credentials, Credential, IdentifyInactive, InactiveCredential, InactiveSpec,
 };
 use duo::DuoClient;
 
@@ -30,8 +29,8 @@ fn main() {
     let aws_client_config = AwsClientConfig::with_region(Region::UsEast1).expect("Failed to create AWS client config");
 
     let mut credentials = check_duo_credentials(&duo_client).expect("Failed to get Duo credentials");
-    let aws_redentials = check_aws_credentials(&aws_client_config).expect("failed to load credentials");
-    credentials.extend(aws_redentials);
+    let aws_credentials = check_aws_credentials(&aws_client_config).expect("failed to load credentials");
+    credentials.extend(aws_credentials);
 
     print_credentials(&credentials);
 
@@ -45,7 +44,7 @@ fn main() {
     print_inactives(&inactives);
 }
 
-fn print_credentials(credentials: &[CredentialCheck]) {
+fn print_credentials(credentials: &[Credential]) {
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
     table.set_titles(Row::new(vec![
@@ -62,17 +61,15 @@ fn print_credentials(credentials: &[CredentialCheck]) {
     ]));
 
     for c in credentials {
-        let row = match c {
-            CredentialCheck::Aws { credential } => credential_to_row("AWS", credential),
-            CredentialCheck::Duo { credential } => credential_to_row("Duo", credential),
-        };
+        let row = credential_to_row(c);
         table.add_row(row);
     }
 
     table.printstd();
 }
 
-fn credential_to_row(service: &str, credential: &Credential) -> Row {
+fn credential_to_row(credential: &Credential) -> Row {
+    let service = format!("{:?}", credential.service);
     let user_name = &credential.user_name;
     let id = &credential.id;
     let link_id = credential.linked_id.as_deref().unwrap_or_else(|| "-");
@@ -94,7 +91,7 @@ fn credential_to_row(service: &str, credential: &Credential) -> Row {
     };
 
     Row::new(vec![
-        Cell::new(service),
+        Cell::new(&service),
         Cell::new(&user_name),
         Cell::new(&id),
         Cell::new(&link_id).style_spec("c"),
@@ -119,26 +116,24 @@ fn print_inactives(credentials: &[InactiveCredential]) {
         Cell::new("Action"),
     ]));
 
-    for c in credentials {
-        let row = match c.credential {
-            CredentialCheck::Aws { ref credential } => inactivity_to_row("AWS", credential, c.action),
-            CredentialCheck::Duo { ref credential } => inactivity_to_row("Duo", credential, c.action),
-        };
+    for ic in credentials {
+        let row = inactivity_to_row(ic);
         table.add_row(row);
     }
 
     table.printstd();
 }
 
-fn inactivity_to_row(service: &str, credential: &Credential, action: InactiveAction) -> Row {
-    let user_name = &credential.user_name;
-    let id = &credential.id;
-    let credential_type = format!("{:?}", credential.credential);
-    let credential_state = format!("{:?}", credential.state);
-    let action = format!("{:?}", action);
+fn inactivity_to_row(ic: &InactiveCredential) -> Row {
+    let service = format!("{:?}", ic.credential.service);
+    let user_name = &ic.credential.user_name;
+    let id = &ic.credential.id;
+    let credential_type = format!("{:?}", ic.credential.credential);
+    let credential_state = format!("{:?}", ic.credential.state);
+    let action = format!("{:?}", ic.action);
 
     Row::new(vec![
-        Cell::new(service),
+        Cell::new(&service),
         Cell::new(&user_name),
         Cell::new(&id),
         Cell::new(&credential_type),
