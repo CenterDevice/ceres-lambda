@@ -1,5 +1,5 @@
 [package]
-name = "credentials-watchtower"
+name = "security-watchtower"
 version = "0.0.1"
 authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
 build = "build.rs"
@@ -11,8 +11,12 @@ edition = "2018"
 path = "src/bin/check_credentials.rs"
 name = "check_credentials"
 
+[[bin]]
+name = "validate-config-security-watchtower"
+path = "src/bin/validate-config.rs"
+
 [lib]
-name = "credentials_watchtower"
+name = "security_watchtower"
 path = "src/lib.rs"
 
 [dependencies]
