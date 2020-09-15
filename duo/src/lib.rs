@@ -54,6 +54,14 @@ impl<T> DuoResponse<T> {
     }
 }
 
+/// Encapsulates Duo server connection configuration
+#[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize, Eq, PartialEq)]
+pub struct DuoClientConfig {
+    pub api_host_name: String,
+    pub integration_key: String,
+    pub secret_key: String,
+}
+
 /// Encapsulates Duo server connection.
 #[derive(Debug)]
 pub struct DuoClient {
