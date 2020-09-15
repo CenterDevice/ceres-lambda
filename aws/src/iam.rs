@@ -2,7 +2,7 @@ use crate::AwsClientConfig;
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 use log::{debug, warn};
-use rusoto_iam::{GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersRequest};
+use rusoto_iam::{GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersRequest, UpdateAccessKeyRequest, DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest};
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ pub fn list_users(aws_client_config: &AwsClientConfig) -> Result<Vec<User>, Erro
 
 #[derive(Debug, Clone)]
 pub struct AccessKeyMetadata {
-    pub access_key_id: String,
+    pub key_id: String,
     pub create_date: DateTime<Utc>,
     pub status: AccessKeyMetadataStatus,
     pub user_name: String,
@@ -78,7 +78,7 @@ impl AccessKeyMetadata {
         let user_name = value.user_name.ok_or_else(|| err_msg("no user name provided"))?;
 
         Ok(AccessKeyMetadata {
-            access_key_id,
+            key_id: access_key_id,
             create_date,
             status,
             user_name,
@@ -159,7 +159,7 @@ impl AccessKeyLastUsed {
         Ok(AccessKeyLastUsed {
             user_name: access_key.user_name,
             user_id: access_key.user_id,
-            access_key_id: access_key.access_key_id,
+            access_key_id: access_key.key_id,
             status: access_key.status,
             last_used_date,
             region: value.region,
@@ -172,23 +172,130 @@ pub fn list_access_last_used(
     aws_client_config: &AwsClientConfig,
     access_key: AccessKeyMetadata
 ) -> Result<AccessKeyLastUsed, Error> {
-    debug!("Get access key last used for key '{}'", &access_key.access_key_id);
+    debug!("Get access key last used for key '{}'", &access_key.key_id);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
     let http_client = aws_client_config.http_client.clone();
     let iam = IamClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
 
     let request = GetAccessKeyLastUsedRequest {
-        access_key_id: access_key.access_key_id.clone(),
+        access_key_id: access_key.key_id.clone(),
     };
 
     let res = iam.get_access_key_last_used(request).sync();
     debug!(
         "Finished get access key last used for key '{}'; success={}.",
-        &access_key.access_key_id,
+        &access_key.key_id,
         res.is_ok()
     );
     let res = res?.access_key_last_used.ok_or_else(|| err_msg("no result received"))?;
 
     AccessKeyLastUsed::try_from(access_key, res)
+}
+
+pub fn disable_access_key(
+    aws_client_config: &AwsClientConfig,
+    access_key_id: String,
+    user_name: String,
+) -> Result<(), Error> {
+    debug!("Disabling access '{}' of user '{}'", &access_key_id, &user_name);
+
+    let credentials_provider = aws_client_config.credentials_provider.clone();
+    let http_client = aws_client_config.http_client.clone();
+    let iam = IamClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
+
+    let request = UpdateAccessKeyRequest {
+        access_key_id: access_key_id.clone(),
+        status: "Inactive".to_string(),
+        user_name: Some(user_name.clone())
+    };
+
+    let res = iam.update_access_key(request).sync();
+    debug!(
+        "Finished disabling of access key '{}' from user '{}'; success={}.",
+        &access_key_id,
+        &user_name,
+        res.is_ok()
+    );
+    let res = res?;
+
+    Ok(res)
+}
+
+pub fn delete_access_key(
+    aws_client_config: &AwsClientConfig,
+    access_key_id: String,
+    user_name: String,
+) -> Result<(), Error> {
+    debug!("Deleting access '{}' of user '{}'", &access_key_id, &user_name);
+
+    let credentials_provider = aws_client_config.credentials_provider.clone();
+    let http_client = aws_client_config.http_client.clone();
+    let iam = IamClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
+
+    let request = DeleteAccessKeyRequest {
+        access_key_id: access_key_id.clone(),
+        user_name: Some(user_name.clone())
+    };
+
+    let res = iam.delete_access_key(request).sync();
+    debug!(
+        "Finished deleting of access key '{}' from user '{}'; success={}.",
+        &access_key_id,
+        &user_name,
+        res.is_ok()
+    );
+    let res = res?;
+
+    Ok(res)
+}
+
+pub fn disable_user(
+    aws_client_config: &AwsClientConfig,
+    user_name: String,
+) -> Result<(), Error> {
+    debug!("Deleting password of user '{}'", &user_name);
+
+    let credentials_provider = aws_client_config.credentials_provider.clone();
+    let http_client = aws_client_config.http_client.clone();
+    let iam = IamClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
+
+    let request = DeleteLoginProfileRequest {
+        user_name: user_name.clone(),
+    };
+
+    let res = iam.delete_login_profile(request).sync();
+    debug!(
+        "Finished deleting password of user '{}'; success={}.",
+        &user_name,
+        res.is_ok()
+    );
+    let res = res?;
+
+    Ok(res)
+}
+
+pub fn delete_user(
+    aws_client_config: &AwsClientConfig,
+    user_name: String,
+) -> Result<(), Error> {
+    debug!("Deleting user '{}'", &user_name);
+
+    let credentials_provider = aws_client_config.credentials_provider.clone();
+    let http_client = aws_client_config.http_client.clone();
+    let iam = IamClient::new_with(http_client, credentials_provider, aws_client_config.region.clone());
+
+    let request = DeleteUserRequest {
+        user_name: user_name.clone(),
+    };
+
+    let res = iam.delete_user(request).sync();
+    debug!(
+        "Finished deleting user '{}'; success={}.",
+        &user_name,
+        res.is_ok()
+    );
+    let res = res?;
+
+    Ok(res)
 }
