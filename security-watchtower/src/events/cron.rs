@@ -6,11 +6,12 @@ use serde_derive::{Deserialize, Serialize};
 
 use aws::{AwsClientConfig, Filter};
 use bosun::{Bosun, Datum, Tags};
+use duo::DuoClient;
 
+use crate::check_credentials::{check_aws_credentials, check_duo_credentials, Credential, IdentifyInactive, InactiveSpec, ApplyInactiveAction, InactiveAction};
 use crate::config::{CredentialsConfig, FunctionConfig};
 use crate::events::HandleResult;
 use crate::metrics;
-use duo::DuoClient;
 
 // cf. https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html
 // {
@@ -55,9 +56,11 @@ pub fn handle<T: Bosun>(
 
 #[derive(Debug, Serialize)]
 pub struct CredentialStats {
+    pub total: usize,
     pub kept: usize,
     pub disabled: usize,
     pub deleted: usize,
+    pub failed: usize,
 }
 
 pub fn credentials<T: Bosun>(
@@ -66,12 +69,87 @@ pub fn credentials<T: Bosun>(
     config: &CredentialsConfig,
     bosun: &T,
 ) -> Result<CredentialStats, Error> {
+    let mut credentials = check_duo_credentials(&duo_client).expect("Failed to get Duo credentials");
+    debug!("Retrieved DUO credentials: {}", credentials.len());
+    /*
+    let aws_credentials = check_aws_credentials(&aws_client_config).expect("failed to load credentials");
+    debug!("Retrieved AWS credentials: {}", aws_credentials.len());
+    credentials.extend(aws_credentials);
+     */
+    bosun_emit_credential_last_used(bosun, &credentials)?;
 
-    Ok(CredentialStats{
-        kept: 0,
+    debug!("Checking for inactive credentials");
+    let inactive_spec = InactiveSpec {
+        disable_threshold_days: config.disable_threshold_days,
+        delete_threshold_days: config.delete_threshold_days,
+    };
+    let inactives = credentials.identify_inactive(&inactive_spec);
+    if log::max_level() >= log::Level::Info {
+        for ic in &inactives {
+            info!(
+                "Credential {}:{} for user {} with id {} is inactive. I'm going to {} it.",
+                ic.credential.service,
+                ic.credential.kind,
+                ic.credential.user_name,
+                ic.credential.id,
+                ic.action,
+            );
+        }
+    }
+
+    debug!("Applying actions for inactive credentials");
+    let mut stats = CredentialStats {
+        total: credentials.len(),
+        kept: credentials.len() - inactives.len(),
         disabled: 0,
-        deleted: 0
-    })
+        deleted: 0,
+        failed: 0,
+    };
+    if !inactives.is_empty() {
+        for ic in &inactives {
+            if config.actions_enabled {
+                debug!("Applying {} to {}:{}:{}/{}", ic.action, ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id);
+                let res = ic.apply(aws_client_config, duo_client);
+                info!("Applied {} to {}:{}:{}/{}: success = {}", ic.action, ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id, res.is_ok());
+
+                if res.is_err() {
+                    stats.failed += 1;
+                } else {
+                    match ic.action {
+                        InactiveAction::Disable => stats.disabled +=1,
+                        InactiveAction::Delete => stats.deleted += 1,
+                        _ => {},
+                    }
+                }
+            } else {
+                ic.dry_run(aws_client_config, duo_client)?;
+            }
+        }
+    } else {
+        info!("No inactive credentials found, nothing to do.")
+    }
+
+    Ok(stats)
+}
+
+fn bosun_emit_credential_last_used<T: Bosun>(bosun: &T, credentials: &[Credential]) -> Result<(), Error> {
+    for credential in credentials {
+        let mut tags = Tags::new();
+        tags.insert("service".to_string(), credential.service.to_string());
+        tags.insert("kind".to_string(), credential.kind.to_string());
+        tags.insert("user_name".to_string(), credential.user_name.replace(" ", "_"));
+
+        let value = if let Some(last_used) = credential.last_used {
+            (Utc::now() - last_used).num_days()
+        } else {
+            -1
+        }.to_string();
+
+        let datum = Datum::now(metrics::CREDENTIAL_LAST_USAGE, &value, &tags);
+        bosun.emit_datum(&datum)?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -98,7 +176,7 @@ mod tests {
                 "id": "46cc8812-1000-45bc-50f8-a42d3335eeda",
                 "region": "eu-central-1",
                 "resources": [
-                    "arn:aws:events:eu-central-1:959479900016:rule/scheduled_events_scaletower"
+                    "arn:aws:events:eu-central-1:959479900016:rule/scheduled_events_security-watchtower"
                 ],
                 "source": "aws.events",
                 "time": "2020-08-31T16:51:48Z",

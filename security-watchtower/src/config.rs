@@ -67,6 +67,8 @@ impl Default for FunctionConfig {
         };
 
         let credentials = CredentialsConfig {
+            disable_threshold_days: 60,
+            delete_threshold_days: 180,
             actions_enabled: false,
         };
 
@@ -76,6 +78,8 @@ impl Default for FunctionConfig {
 
 #[derive(PartialEq, Deserialize, Serialize, Debug)]
 pub struct CredentialsConfig {
+    pub disable_threshold_days: i64,
+    pub delete_threshold_days: i64,
     pub actions_enabled: bool,
 }
 
@@ -103,6 +107,8 @@ integration_key = "123456789ABCDEF"
 secret_key = "WouldYouWant2Know?"
 
 [credentials]
+disable_threshold_days = 60
+delete_threshold_days = 180
 actions_enabled = false
 "#;
         let mut expected = FunctionConfig::default();

@@ -1,18 +1,29 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
+use failure::_core::fmt::Formatter;
 use log::info;
 
+use aws::AwsClientConfig;
 use aws::iam;
 use aws::iam::{AccessKeyLastUsed, AccessKeyMetadataStatus};
-use aws::AwsClientConfig;
 use duo::{Duo, DuoClient, DuoResponse, UserStatus};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Service {
     Aws,
     Duo,
+}
+
+impl fmt::Display for Service {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Service::Aws => f.write_str("aws"),
+            Service::Duo => f.write_str("duo"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +70,16 @@ impl Credential {
         match self.kind {
             CredentialKind::TwoFA => true,
             _ => false,
+        }
+    }
+}
+
+impl fmt::Display for CredentialKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CredentialKind::ApiKey => f.write_str("api_key"),
+            CredentialKind::Password => f.write_str("password"),
+            CredentialKind::TwoFA => f.write_str("tfa"),
         }
     }
 }
@@ -170,7 +191,6 @@ pub fn check_duo_credentials(duo_client: &DuoClient) -> Result<Vec<Credential>, 
 
 #[derive(Debug)]
 pub struct InactiveSpec {
-    pub notification_offset: i64,
     pub disable_threshold_days: i64,
     pub delete_threshold_days: i64,
 }
@@ -180,6 +200,16 @@ pub enum InactiveAction {
     Keep = 1,
     Disable = 2,
     Delete = 3,
+}
+
+impl fmt::Display for InactiveAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InactiveAction::Keep => f.write_str("keep"),
+            InactiveAction::Disable => f.write_str("disable"),
+            InactiveAction::Delete => f.write_str("delete"),
+        }
+    }
 }
 
 impl InactiveAction {
@@ -305,7 +335,7 @@ impl<'a> ApplyInactiveAction for InactiveCredential<'a> {
             (Aws, Password, Delete) => info!("Would have deleted AWS user {}", user_name),
             (Duo, TwoFA, Disable) => info!("Would have disabled DUO user {}", user_name),
             (Duo, TwoFA, Delete) => info!("Would have deleted DUO user {}", user_name),
-            _ => {},
+            _ => {}
         }
 
         Ok(())

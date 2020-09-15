@@ -35,7 +35,6 @@ fn main() {
     print_credentials(&credentials);
 
     let inactive_spec = InactiveSpec {
-        notification_offset: 14,
         disable_threshold_days: 60,
         delete_threshold_days: 180,
     };

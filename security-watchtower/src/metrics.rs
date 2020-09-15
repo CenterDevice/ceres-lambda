@@ -16,7 +16,7 @@ fn bosun_metadata() -> Vec<Metadata<'static>> {
         CREDENTIAL_LAST_USAGE,
         "gauge",
         "Days",
-        "Number of days a credential has been used for the last time",
+        "Number of days a credential has been used for the last time; -1 is used, if unknown",
     ));
 
     metadatas.push(Metadata::new(SCHEDULED_EVENT, "gauge", "Event", "AWS schedule event"));

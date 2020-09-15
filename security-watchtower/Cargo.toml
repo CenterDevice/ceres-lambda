@@ -6,6 +6,9 @@ build = "build.rs"
 
 edition = "2018"
 
+[[bin]]
+name = "security-watchtower"
+path = "src/bin/security-watchtower.rs"
 
 [[bin]]
 path = "src/bin/check_credentials.rs"
