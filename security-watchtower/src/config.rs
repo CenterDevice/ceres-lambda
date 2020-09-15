@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use clams::config::*;
 use clams_derive::Config;
@@ -6,8 +6,8 @@ use failure::Error;
 use serde_derive::{Deserialize, Serialize};
 
 use aws::{kms, AwsClientConfig};
-use lambda::config::{BosunConfig, EncryptedConfig};
 use duo::DuoClientConfig;
+use lambda::config::{BosunConfig, EncryptedConfig};
 
 #[derive(Config, PartialEq, Deserialize, Serialize, Debug)]
 pub struct EncryptedFunctionConfig {
@@ -19,7 +19,7 @@ pub struct EncryptedFunctionConfig {
 impl EncryptedConfig<EncryptedFunctionConfig, FunctionConfig> for EncryptedFunctionConfig {
     fn decrypt(self, aws_client_config: &AwsClientConfig) -> Result<FunctionConfig, Error> {
         let bosun_auth_password = kms::decrypt_base64(aws_client_config, &self.bosun.password)?;
-        let duo_secret_key= kms::decrypt_base64(aws_client_config, &self.duo.secret_key)?;
+        let duo_secret_key = kms::decrypt_base64(aws_client_config, &self.duo.secret_key)?;
 
         let bosun = BosunConfig {
             password: bosun_auth_password,
@@ -63,16 +63,21 @@ impl Default for FunctionConfig {
         let duo = DuoClientConfig {
             api_host_name: "apixxxxx.duo.com".to_string(),
             integration_key: "123456789ABCDEF".to_string(),
-            secret_key: "WouldYouWant2Know?".to_string()
+            secret_key: "WouldYouWant2Know?".to_string(),
         };
 
         let credentials = CredentialsConfig {
             disable_threshold_days: 60,
             delete_threshold_days: 180,
             actions_enabled: false,
+            whitelist: HashSet::new(),
         };
 
-        FunctionConfig { bosun, duo, credentials }
+        FunctionConfig {
+            bosun,
+            duo,
+            credentials,
+        }
     }
 }
 
@@ -81,6 +86,7 @@ pub struct CredentialsConfig {
     pub disable_threshold_days: i64,
     pub delete_threshold_days: i64,
     pub actions_enabled: bool,
+    pub whitelist: HashSet<String>,
 }
 
 #[cfg(test)]
@@ -110,6 +116,7 @@ secret_key = "WouldYouWant2Know?"
 disable_threshold_days = 60
 delete_threshold_days = 180
 actions_enabled = false
+whitelist = []
 "#;
         let mut expected = FunctionConfig::default();
         expected.bosun.tags.insert("tag1".to_string(), "value1".to_string());

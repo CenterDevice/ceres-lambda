@@ -3,12 +3,11 @@ use std::fmt;
 
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
-use failure::_core::fmt::Formatter;
 use log::info;
 
-use aws::AwsClientConfig;
 use aws::iam;
 use aws::iam::{AccessKeyLastUsed, AccessKeyMetadataStatus};
+use aws::AwsClientConfig;
 use duo::{Duo, DuoClient, DuoResponse, UserStatus};
 
 #[derive(Debug, Clone, Copy)]
@@ -74,16 +73,6 @@ impl Credential {
     }
 }
 
-impl fmt::Display for CredentialKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CredentialKind::ApiKey => f.write_str("api_key"),
-            CredentialKind::Password => f.write_str("password"),
-            CredentialKind::TwoFA => f.write_str("tfa"),
-        }
-    }
-}
-
 impl From<iam::User> for Credential {
     fn from(user: iam::User) -> Self {
         Credential {
@@ -139,6 +128,16 @@ pub enum CredentialKind {
     Password,
     ApiKey,
     TwoFA,
+}
+
+impl fmt::Display for CredentialKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CredentialKind::ApiKey => f.write_str("api_key"),
+            CredentialKind::Password => f.write_str("password"),
+            CredentialKind::TwoFA => f.write_str("tfa"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -304,9 +303,9 @@ pub trait ApplyInactiveAction {
 
 impl<'a> ApplyInactiveAction for InactiveCredential<'a> {
     fn apply(&self, aws: &AwsClientConfig, duo: &DuoClient) -> Result<(), Error> {
-        use Service::*;
         use CredentialKind::*;
         use InactiveAction::*;
+        use Service::*;
 
         let id = self.credential.id.clone();
         let user_name = self.credential.user_name.clone();
@@ -322,9 +321,9 @@ impl<'a> ApplyInactiveAction for InactiveCredential<'a> {
     }
 
     fn dry_run(&self, _: &AwsClientConfig, _: &DuoClient) -> Result<(), Error> {
-        use Service::*;
         use CredentialKind::*;
         use InactiveAction::*;
+        use Service::*;
 
         let id = self.credential.id.clone();
         let user_name = self.credential.user_name.clone();

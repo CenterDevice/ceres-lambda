@@ -1,14 +1,17 @@
 use chrono::Utc;
 use failure::Error;
 use lambda_runtime::Context;
-use log::{debug, info};
+use log::{debug, info, trace};
 use serde_derive::{Deserialize, Serialize};
 
 use aws::{AwsClientConfig, Filter};
 use bosun::{Bosun, Datum, Tags};
 use duo::DuoClient;
 
-use crate::check_credentials::{check_aws_credentials, check_duo_credentials, Credential, IdentifyInactive, InactiveSpec, ApplyInactiveAction, InactiveAction};
+use crate::check_credentials::{
+    check_aws_credentials, check_duo_credentials, ApplyInactiveAction, Credential, IdentifyInactive, InactiveAction,
+    InactiveSpec,
+};
 use crate::config::{CredentialsConfig, FunctionConfig};
 use crate::events::HandleResult;
 use crate::metrics;
@@ -45,7 +48,11 @@ pub fn handle<T: Bosun>(
 ) -> Result<HandleResult, Error> {
     info!("Received Scheduled Event.");
 
-    let duo_client = DuoClient::new(&config.duo.api_host_name, &config.duo.integration_key, &config.duo.secret_key)?;
+    let duo_client = DuoClient::new(
+        &config.duo.api_host_name,
+        &config.duo.integration_key,
+        &config.duo.secret_key,
+    )?;
 
     let credentials = credentials(aws_client_config, &duo_client, &config.credentials, bosun)?;
 
@@ -69,6 +76,7 @@ pub fn credentials<T: Bosun>(
     config: &CredentialsConfig,
     bosun: &T,
 ) -> Result<CredentialStats, Error> {
+    debug!("Config: {:?}", config);
     let mut credentials = check_duo_credentials(&duo_client).expect("Failed to get Duo credentials");
     debug!("Retrieved DUO credentials: {}", credentials.len());
     /*
@@ -87,12 +95,8 @@ pub fn credentials<T: Bosun>(
     if log::max_level() >= log::Level::Info {
         for ic in &inactives {
             info!(
-                "Credential {}:{} for user {} with id {} is inactive. I'm going to {} it.",
-                ic.credential.service,
-                ic.credential.kind,
-                ic.credential.user_name,
-                ic.credential.id,
-                ic.action,
+                "Credential {}:{} for user '{}' with id {} is inactive. Appropriate action would be to {} it.",
+                ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id, ic.action,
             );
         }
     }
@@ -107,18 +111,38 @@ pub fn credentials<T: Bosun>(
     };
     if !inactives.is_empty() {
         for ic in &inactives {
+            let whitelist_key = ic.credential.whitelist_key();
+            trace!("Whitelist key: {}", whitelist_key);
+            if config.whitelist.contains(&whitelist_key) {
+                debug!(
+                    "Ignoring '{}:{}:{}/{}' because this credential is whitelisted.",
+                    ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id
+                );
+                continue;
+            }
             if config.actions_enabled {
-                debug!("Applying {} to {}:{}:{}/{}", ic.action, ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id);
+                debug!(
+                    "Applying {} to '{}:{}:{}/{}'",
+                    ic.action, ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id
+                );
                 let res = ic.apply(aws_client_config, duo_client);
-                info!("Applied {} to {}:{}:{}/{}: success = {}", ic.action, ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id, res.is_ok());
+                info!(
+                    "Applied {} to '{}:{}:{}/{}': success = {}",
+                    ic.action,
+                    ic.credential.service,
+                    ic.credential.kind,
+                    ic.credential.user_name,
+                    ic.credential.id,
+                    res.is_ok()
+                );
 
                 if res.is_err() {
                     stats.failed += 1;
                 } else {
                     match ic.action {
-                        InactiveAction::Disable => stats.disabled +=1,
+                        InactiveAction::Disable => stats.disabled += 1,
                         InactiveAction::Delete => stats.deleted += 1,
-                        _ => {},
+                        _ => {}
                     }
                 }
             } else {
@@ -143,13 +167,24 @@ fn bosun_emit_credential_last_used<T: Bosun>(bosun: &T, credentials: &[Credentia
             (Utc::now() - last_used).num_days()
         } else {
             -1
-        }.to_string();
+        }
+        .to_string();
 
         let datum = Datum::now(metrics::CREDENTIAL_LAST_USAGE, &value, &tags);
         bosun.emit_datum(&datum)?;
     }
 
     Ok(())
+}
+
+trait WhiteListKey {
+    fn whitelist_key(&self) -> String;
+}
+
+impl WhiteListKey for Credential {
+    fn whitelist_key(&self) -> String {
+        format!("{}:{}:{}", self.service, self.kind, self.id)
+    }
 }
 
 #[cfg(test)]

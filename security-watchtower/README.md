@@ -17,6 +17,20 @@ iaas_name = 'aws'
 iaas_account = 'staging'
 iaas_env = 'staging'
 
+[duo]
+api_host_name = "apixxxxx.duo.com"
+integration_key = "123456789ABCDEF"
+secret_key = "WouldYouWant2Know?"
+
+[credentials]
+disable_threshold_days = 60
+delete_threshold_days = 180
+actions_enabled = false
+whitelist = [
+    "aws:api_key:12345",
+    "aws:password:23456",
+    "duo:tfa::34567"
+]
 ```
 
 ### Validate Configuration

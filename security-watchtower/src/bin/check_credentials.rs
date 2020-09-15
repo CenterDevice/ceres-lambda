@@ -5,10 +5,10 @@ use prettytable::{format, Cell, Row, Table};
 use rusoto_core::Region;
 
 use aws::AwsClientConfig;
+use duo::DuoClient;
 use security_watchtower::check_credentials::{
     check_aws_credentials, check_duo_credentials, Credential, IdentifyInactive, InactiveCredential, InactiveSpec,
 };
-use duo::DuoClient;
 
 fn main() {
     env_logger::init();
