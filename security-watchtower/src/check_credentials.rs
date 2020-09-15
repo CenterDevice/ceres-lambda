@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
@@ -19,13 +19,47 @@ pub struct Credential {
     pub service: Service,
     pub id: String,
     pub user_name: String,
-    pub credential: CredentialType,
+    pub kind: CredentialKind,
     pub state: CredentialStatus,
     pub last_used: Option<DateTime<Utc>>,
     pub linked_id: Option<String>,
 }
 
 impl Credential {
+    pub fn is_aws(&self) -> bool {
+        match self.service {
+            Service::Aws => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_duo(&self) -> bool {
+        match self.service {
+            Service::Duo => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_api_key(&self) -> bool {
+        match self.kind {
+            CredentialKind::ApiKey => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_password(&self) -> bool {
+        match self.kind {
+            CredentialKind::Password => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_two_fa(&self) -> bool {
+        match self.kind {
+            CredentialKind::TwoFA => true,
+            _ => false,
+        }
+    }
 }
 
 impl From<iam::User> for Credential {
@@ -34,7 +68,7 @@ impl From<iam::User> for Credential {
             service: Service::Aws,
             id: user.user_id,
             user_name: user.user_name,
-            credential: CredentialType::Password,
+            kind: CredentialKind::Password,
             state: CredentialStatus::Unknown,
             last_used: user.password_last_used,
             linked_id: None,
@@ -48,7 +82,7 @@ impl From<iam::AccessKeyLastUsed> for Credential {
             service: Service::Aws,
             id: key.access_key_id,
             user_name: key.user_name,
-            credential: CredentialType::ApiKey,
+            kind: CredentialKind::ApiKey,
             state: match key.status {
                 AccessKeyMetadataStatus::Active => CredentialStatus::Enabled,
                 AccessKeyMetadataStatus::Inactive => CredentialStatus::Disabled,
@@ -65,7 +99,7 @@ impl From<duo::User> for Credential {
             service: Service::Duo,
             id: user.user_id.clone(),
             user_name: user.realname.clone().unwrap_or_else(|| "-".to_string()),
-            credential: CredentialType::TwoFA,
+            kind: CredentialKind::TwoFA,
             state: match user.status {
                 UserStatus::Active | UserStatus::Bypass => CredentialStatus::Enabled,
                 UserStatus::Disabled | UserStatus::LockedOut | UserStatus::PendingDeletion => {
@@ -79,7 +113,7 @@ impl From<duo::User> for Credential {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum CredentialType {
+pub enum CredentialKind {
     Password,
     ApiKey,
     TwoFA,
@@ -95,14 +129,11 @@ pub enum CredentialStatus {
 pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<Credential>, Error> {
     let users = iam::list_users(&aws_client_config)?;
 
-    let mut credentials: Vec<Credential> = Vec::new();
-
-    let user_credentials: Vec<Credential> = users.clone().into_iter().map(Into::into).collect();
-    credentials.append(&mut user_credentials.clone());
+    let mut credentials: Vec<Credential> = users.clone().into_iter().map(Into::into).collect();
 
     let access_keys: Vec<_> = users
-        .into_iter()
-        .map(|x| iam::list_access_keys_for_user(&aws_client_config, x))
+        .iter()
+        .map(|x| iam::list_access_keys_for_user(&aws_client_config, x.clone()))
         .flatten()
         .flatten()
         .map(|x| iam::list_access_last_used(&aws_client_config, x))
@@ -121,10 +152,7 @@ pub fn check_aws_credentials(aws_client_config: &AwsClientConfig) -> Result<Vec<
 pub fn check_duo_credentials(duo_client: &DuoClient) -> Result<Vec<Credential>, Error> {
     let response = duo_client.get_users()?;
     match response {
-        DuoResponse::Ok { response: users } => Ok(users
-            .into_iter()
-            .map(Into::into)
-            .collect()),
+        DuoResponse::Ok { response: users } => Ok(users.into_iter().map(Into::into).collect()),
         DuoResponse::Fail {
             code,
             message,
@@ -148,12 +176,9 @@ pub struct InactiveSpec {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum InactiveAction {
-    Keep,
-    NotifyDisable,
-    Disable,
-    NotifyDelete,
-    Delete,
-    Unknown,
+    Keep = 1,
+    Disable = 2,
+    Delete = 3,
 }
 
 impl InactiveAction {
@@ -174,14 +199,8 @@ impl Inactive for Credential {
             if since > spec.delete_threshold_days {
                 return InactiveAction::Delete;
             }
-            if since > spec.delete_threshold_days - spec.notification_offset {
-                return InactiveAction::NotifyDelete;
-            }
             if since > spec.disable_threshold_days {
                 return InactiveAction::Disable;
-            }
-            if since > spec.disable_threshold_days - spec.notification_offset {
-                return InactiveAction::NotifyDisable;
             }
 
             InactiveAction::Keep
@@ -192,42 +211,57 @@ impl Inactive for Credential {
 }
 
 #[derive(Debug)]
-pub struct InactiveCredential {
-    pub credential: Credential,
+pub struct InactiveCredential<'a> {
+    pub credential: &'a Credential,
     pub action: InactiveAction,
 }
 
 pub trait IdentifyInactive {
-    fn identify_inactive(self, spec: &InactiveSpec) -> Vec<InactiveCredential>;
+    fn identify_inactive(&self, spec: &InactiveSpec) -> Vec<InactiveCredential>;
 }
 
 impl IdentifyInactive for Vec<Credential> {
-    fn identify_inactive(self, spec: &InactiveSpec) -> Vec<InactiveCredential> {
-        let mut matrix: HashMap<String, InactiveAction> = HashMap::new();
+    fn identify_inactive(&self, spec: &InactiveSpec) -> Vec<InactiveCredential> {
+        let mut matrix: HashMap<&str, InactiveAction> = HashMap::new();
+        let mut result = Vec::new();
 
-        for c in &self {
-            let action = c.inactive_action(spec);
-            matrix.insert(c.id.to_string(), action);
-            if let Some(ref link_id) = c.linked_id {
-                matrix.insert(link_id.to_string(), action);
+        // Check inactivity for Duo TFA
+        for credential in self.iter().filter(|x| x.is_duo()) {
+            let action = credential.inactive_action(spec);
+            if !action.keep() {
+                result.push(InactiveCredential { credential, action })
             }
         }
 
-        let inactive_ids: HashSet<&str> = matrix
-            .iter()
-            .filter(|(_, action)| !action.keep())
-            .map(|(id, _)| id.as_str())
-            .collect();
+        // Check inactivity for AWS API keys
+        for credential in self.iter().filter(|x| x.is_aws() && x.is_api_key()) {
+            let action = credential.inactive_action(spec);
+            if !action.keep() {
+                result.push(InactiveCredential { credential, action })
+            }
+            matrix.insert(credential.id.as_str(), action);
+        }
 
-        self.into_iter()
-            .filter(|c| inactive_ids.contains(c.id.as_str()))
-            .map(|c| {
-                let id = c.id.to_string();
-                InactiveCredential {
-                    credential: c,
-                    action: matrix[&id], // Safe, because id comes from self
-                }
-            })
-            .collect()
+        // Check inactivity for AWS Password. In case a password is inactive, compare action with results from API keys
+        // If API key inactivity has positive deviation, use key action. Positive deviation is defined
+        // as "key has been used after password" ^= "account is more active than it seems by the password only.
+        // In this way, we won't disable or even delete an AWS IAM Account just because somebody only uses
+        // the API, e.g., Terraform, AWS CLI etc.
+        for credential in self.iter().filter(|x| x.is_aws() && x.is_password()) {
+            let action = credential.inactive_action(spec);
+            let linked_action = matrix.get(credential.id.as_str());
+
+            use InactiveAction::*;
+            let action = match (action, linked_action) {
+                (Keep, _) | (_, Some(Keep)) => break,
+                (Disable, None) | (Disable, Some(Disable)) | (Disable, Some(Delete)) => Disable,
+                (Delete, Some(Disable)) => Disable,
+                (Delete, None) | (Delete, Some(Delete)) => Delete,
+            };
+
+            result.push(InactiveCredential { credential, action })
+        }
+
+        result
     }
 }

@@ -73,7 +73,7 @@ fn credential_to_row(credential: &Credential) -> Row {
     let user_name = &credential.user_name;
     let id = &credential.id;
     let link_id = credential.linked_id.as_deref().unwrap_or_else(|| "-");
-    let credential_type = format!("{:?}", credential.credential);
+    let credential_type = format!("{:?}", credential.kind);
     let credential_state = format!("{:?}", credential.state);
     let last_time_used = credential
         .last_used
@@ -128,7 +128,7 @@ fn inactivity_to_row(ic: &InactiveCredential) -> Row {
     let service = format!("{:?}", ic.credential.service);
     let user_name = &ic.credential.user_name;
     let id = &ic.credential.id;
-    let credential_type = format!("{:?}", ic.credential.credential);
+    let credential_type = format!("{:?}", ic.credential.kind);
     let credential_state = format!("{:?}", ic.credential.state);
     let action = format!("{:?}", ic.action);
 
