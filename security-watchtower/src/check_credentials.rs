@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
+use log::info;
 
 use aws::iam;
 use aws::iam::{AccessKeyLastUsed, AccessKeyMetadataStatus};
@@ -263,5 +264,73 @@ impl IdentifyInactive for Vec<Credential> {
         }
 
         result
+    }
+}
+
+pub trait ApplyInactiveAction {
+    fn apply(&self, aws: &AwsClientConfig, duo: &DuoClient) -> Result<(), Error>;
+    fn dry_run(&self, aws: &AwsClientConfig, duo: &DuoClient) -> Result<(), Error>;
+}
+
+impl<'a> ApplyInactiveAction for InactiveCredential<'a> {
+    fn apply(&self, aws: &AwsClientConfig, duo: &DuoClient) -> Result<(), Error> {
+        use Service::*;
+        use CredentialKind::*;
+        use InactiveAction::*;
+
+        let id = self.credential.id.clone();
+        let user_name = self.credential.user_name.clone();
+        match (self.credential.service, self.credential.kind, self.action) {
+            (Aws, ApiKey, Disable) => iam::disable_access_key(aws, id, user_name),
+            (Aws, ApiKey, Delete) => iam::delete_access_key(aws, id, user_name),
+            (Aws, Password, Disable) => iam::disable_user(aws, user_name),
+            (Aws, Password, Delete) => iam::delete_user(aws, user_name),
+            (Duo, TwoFA, Disable) => duo.disable_user(id)?.as_result(),
+            (Duo, TwoFA, Delete) => duo.delete_user(id)?.as_result(),
+            _ => Ok(()),
+        }
+    }
+
+    fn dry_run(&self, _: &AwsClientConfig, _: &DuoClient) -> Result<(), Error> {
+        use Service::*;
+        use CredentialKind::*;
+        use InactiveAction::*;
+
+        let id = self.credential.id.clone();
+        let user_name = self.credential.user_name.clone();
+        match (self.credential.service, self.credential.kind, self.action) {
+            (Aws, ApiKey, Disable) => info!("Would have disabled AWS access key {} for {}", id, user_name),
+            (Aws, ApiKey, Delete) => info!("Would have deleted AWS access key {} for {}", id, user_name),
+            (Aws, Password, Disable) => info!("Would have disabled AWS user {}", user_name),
+            (Aws, Password, Delete) => info!("Would have deleted AWS user {}", user_name),
+            (Duo, TwoFA, Disable) => info!("Would have disabled DUO user {}", user_name),
+            (Duo, TwoFA, Delete) => info!("Would have deleted DUO user {}", user_name),
+            _ => {},
+        }
+
+        Ok(())
+    }
+}
+
+trait ToUnitResult {
+    fn as_result(self) -> Result<(), Error>;
+}
+
+impl<T> ToUnitResult for DuoResponse<T> {
+    fn as_result(self) -> Result<(), Error> {
+        match self {
+            DuoResponse::Ok { .. } => Ok(()),
+            DuoResponse::Fail {
+                code,
+                message,
+                message_detail,
+            } => {
+                let msg = format!(
+                    "Duo call failed (code: {}) because {}, {}",
+                    code, message, message_detail
+                );
+                Err(err_msg(msg))
+            }
+        }
     }
 }
