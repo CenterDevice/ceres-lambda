@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -8,7 +9,6 @@ use log::{debug, trace};
 use reqwest::{Method, RequestBuilder, StatusCode};
 use ring::hmac;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
-use std::fmt;
 
 /// Result of an attempt to send meta data or a metric datum
 pub type DuoResult<T> = Result<T, DuoError>;
@@ -148,6 +148,37 @@ impl DuoClient {
         }
     }
 
+    fn delete_duo_api(
+        &self,
+        path: &str,
+        expected: StatusCode,
+    ) -> DuoResult<DuoResponse<()>> {
+        let uri = format!("https://{}{}", self.api_host_name, path);
+
+        let req = self
+            .client
+            .delete(&uri)
+            .header("Content-Type", "application/x-www-form-urlencoded");
+        let params = HashMap::new();
+        let req = self.sign_req(req, Method::POST, path, &params);
+        debug!("Request: '{:?}'", req);
+
+        let res = req.send();
+        match res {
+            Ok(mut response) if response.status() == expected => {
+                let text = response
+                    .text()
+                    .map_err(|_| DuoError::ReceiveError("failed to read response body".to_string()))?;
+                trace!("Answer: '{}'", text);
+                let data = DuoResponse::Ok { response: () };
+                Ok(data)
+            }
+            Ok(response) => Err(DuoError::ReceiveError(format!("{}", response.status()))),
+            Err(err) => Err(DuoError::SendError(format!("{}", err))),
+        }
+    }
+
+
     fn sign_req(
         &self,
         req: RequestBuilder,
@@ -208,8 +239,8 @@ pub struct User {
 }
 
 fn from_unix_timestamp<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
-where
-    D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
 {
     let timestamp: Option<i64> = Option::deserialize(deserializer)?;
     let utc = timestamp
@@ -247,6 +278,7 @@ impl fmt::Display for UserStatus {
 pub trait Duo {
     fn get_users(&self) -> DuoResult<DuoResponse<Vec<User>>>;
     fn disable_user(&self, user_id: String) -> DuoResult<DuoResponse<User>>;
+    fn delete_user(&self, user_id: String) -> DuoResult<DuoResponse<()>>;
 }
 
 impl Duo for DuoClient {
@@ -259,6 +291,11 @@ impl Duo for DuoClient {
         let disabled = UserStatus::Disabled.to_string();
         let params: HashMap<&str, &str> = [("status", disabled.as_str())].iter().cloned().collect();
         self.post_duo_api(&path, &params, StatusCode::OK)
+    }
+
+    fn delete_user(&self, user_id: String) -> DuoResult<DuoResponse<()>> {
+        let path = format!("/admin/v1/users/{}", user_id);
+        self.delete_duo_api(&path, StatusCode::OK)
     }
 }
 
