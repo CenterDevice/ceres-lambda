@@ -1,7 +1,7 @@
 use chrono::Utc;
 use failure::{Error, Fail};
 use lambda_runtime::Context;
-use log::{debug, error, info, trace};
+use log::{error, info, trace};
 use rusoto_sts::{AssumeRoleError, AssumeRoleRequest, Sts, StsClient};
 use serde_derive::{Deserialize, Serialize};
 
@@ -63,7 +63,7 @@ pub fn handle<T: Bosun>(
         std::env::var("CD_IAM_ROLE_ARN").map_err(|e| e.context(LambdaError::FailedEnvVar("CD_IAM_ROLE_ARN")))?;
     let iam_aws_client_config = assume_iam_role(iam_role_arn)?;
 
-    let credentials = get_credentials(&iam_aws_client_config, &duo_client, &config.credentials, bosun)?;
+    let credentials = process_credentials(&iam_aws_client_config, &duo_client, &config.credentials, bosun)?;
 
     let handle_result = HandleResult::Cron { credentials };
 
@@ -80,8 +80,8 @@ fn assume_iam_role(iam_role_arn: String) -> Result<AwsClientConfig, Error> {
         })
         .sync();
     if let Err(AssumeRoleError::Unknown(ref buf)) = res {
-            let str = String::from_utf8_lossy(&buf.body);
-            error!("Error: {}", str);
+        let str = String::from_utf8_lossy(&buf.body);
+        error!("Error: {}", str);
     }
     let credentials = res?.credentials.unwrap(); // Safe unwrap, because the call was successfull
     let static_provider = StaticProvider::new(
@@ -107,23 +107,24 @@ pub struct CredentialStats {
     pub failed: usize,
 }
 
-pub fn get_credentials<T: Bosun>(
+pub fn process_credentials<T: Bosun>(
     aws_client_config: &AwsClientConfig,
     duo_client: &DuoClient,
     config: &CredentialsConfig,
     bosun: &T,
 ) -> Result<CredentialStats, Error> {
-    debug!("Config: {:?}", config);
+    info!("Config: {:?}", config);
     let mut credentials = check_duo_credentials(&duo_client).expect("Failed to get Duo credentials");
-    debug!("Retrieved DUO credentials: {}", credentials.len());
+    info!("Retrieved DUO credentials: {}", credentials.len());
 
     let aws_credentials = check_aws_credentials(&aws_client_config).expect("failed to load credentials");
-    debug!("Retrieved AWS credentials: {}", aws_credentials.len());
+    info!("Retrieved AWS credentials: {}", aws_credentials.len());
     credentials.extend(aws_credentials);
 
+    info!("Sending credentials metadata to Bosun");
     bosun_emit_credential_last_used(bosun, &credentials)?;
 
-    debug!("Checking for inactive credentials");
+    info!("Checking for inactive credentials");
     let inactive_spec = InactiveSpec {
         disable_threshold_days: config.disable_threshold_days,
         delete_threshold_days: config.delete_threshold_days,
@@ -132,13 +133,13 @@ pub fn get_credentials<T: Bosun>(
     if log::max_level() >= log::Level::Info {
         for ic in &inactives {
             info!(
-                "Credential {}:{} for user '{}' with id {} is inactive. Appropriate action would be to {} it.",
-                ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id, ic.action,
+                "Credential {}:{} for user '{}' with id {} is inactive since {:?}. Appropriate action would be to {} it.",
+                ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id, ic.credential.last_used, ic.action,
             );
         }
     }
 
-    debug!("Applying actions for inactive credentials");
+    info!("Applying actions for inactive credentials");
     let mut stats = CredentialStats {
         total: credentials.len(),
         kept: credentials.len() - inactives.len(),
@@ -151,14 +152,14 @@ pub fn get_credentials<T: Bosun>(
             let whitelist_key = ic.credential.whitelist_key();
             trace!("Whitelist key: {}", whitelist_key);
             if config.whitelist.contains(&whitelist_key) {
-                debug!(
+                info!(
                     "Ignoring '{}:{}:{}/{}' because this credential is whitelisted.",
                     ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id
                 );
                 continue;
             }
             if config.actions_enabled {
-                debug!(
+                info!(
                     "Applying {} to '{}:{}:{}/{}'",
                     ic.action, ic.credential.service, ic.credential.kind, ic.credential.user_name, ic.credential.id
                 );
