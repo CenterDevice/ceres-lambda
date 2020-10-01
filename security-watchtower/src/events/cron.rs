@@ -20,6 +20,7 @@ use aws::auth::create_provider_with_static_provider;
 use lambda::error::LambdaError;
 use rusoto_core::credential::StaticProvider;
 use rusoto_core::Region;
+use failure::_core::time::Duration;
 
 // cf. https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html
 // {
@@ -208,6 +209,9 @@ fn bosun_emit_credential_last_used<T: Bosun>(bosun: &T, credentials: &[Credentia
         }
         .to_string();
 
+        // Please never show this to anybody, but OpenTSDB has a resolution of ms, but we might send multiple values
+        // for the same user during only 1 ms. So let's tarpit this a bit.
+        std::thread::sleep(Duration::from_millis(5));
         let datum = Datum::now(metrics::CREDENTIAL_LAST_USAGE, &value, &tags);
         bosun.emit_datum(&datum)?;
     }
@@ -227,7 +231,6 @@ impl WhiteListKey for Credential {
 
 #[cfg(test)]
 mod tests {
-    use chrono::Duration;
     use serde_json::json;
     use spectral::prelude::*;
 
