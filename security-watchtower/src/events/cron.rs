@@ -1,10 +1,11 @@
 use chrono::Utc;
-use failure::Error;
+use failure::{Error, Fail};
 use lambda_runtime::Context;
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
+use rusoto_sts::{StsClient, Sts, AssumeRoleRequest, AssumeRoleError};
 use serde_derive::{Deserialize, Serialize};
 
-use aws::{AwsClientConfig, Filter};
+use aws::AwsClientConfig;
 use bosun::{Bosun, Datum, Tags};
 use duo::DuoClient;
 
@@ -15,6 +16,10 @@ use crate::check_credentials::{
 use crate::config::{CredentialsConfig, FunctionConfig};
 use crate::events::HandleResult;
 use crate::metrics;
+use aws::auth::{create_provider_with_static_provider};
+use rusoto_core::Region;
+use rusoto_core::credential::StaticProvider;
+use lambda::error::LambdaError;
 
 // cf. https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html
 // {
@@ -41,7 +46,7 @@ pub struct ScheduledEvent {
 }
 
 pub fn handle<T: Bosun>(
-    aws_client_config: &AwsClientConfig,
+    _: &AwsClientConfig,
     _: &Context,
     config: &FunctionConfig,
     bosun: &T,
@@ -54,11 +59,43 @@ pub fn handle<T: Bosun>(
         &config.duo.secret_key,
     )?;
 
-    let credentials = credentials(aws_client_config, &duo_client, &config.credentials, bosun)?;
+    let iam_role_arn = std::env::var("CD_IAM_ROLE_ARN").map_err(|e| e.context(LambdaError::FailedEnvVar("CD_IAM_ROLE_ARN")))?;
+    let iam_aws_client_config = assume_iam_role(iam_role_arn)?;
+
+    let credentials = get_credentials(&iam_aws_client_config, &duo_client, &config.credentials, bosun)?;
 
     let handle_result = HandleResult::Cron { credentials };
 
     Ok(handle_result)
+}
+
+fn assume_iam_role(iam_role_arn: String) -> Result<AwsClientConfig, Error> {
+    let sts = StsClient::new(Region::UsEast1);
+    let credentials = sts.assume_role(AssumeRoleRequest {
+        role_arn: iam_role_arn,
+        role_session_name: "Lambda2Iam".to_string(),
+        ..Default::default()
+    }).sync();
+    match credentials {
+        Err(AssumeRoleError::Unknown(ref buf)) => {
+            let str = String::from_utf8_lossy(&buf.body);
+            error!("Error: {}", str);
+        }
+        _ => {}
+    }
+    let credentials = credentials?.credentials.unwrap(); // Safe unwrap, because the call was successfull
+    let static_provider = StaticProvider::new(
+        credentials.access_key_id,
+        credentials.secret_access_key,
+        Some(credentials.session_token),
+        None,
+    );
+
+    let credential_provider = create_provider_with_static_provider(static_provider)?;
+    let iam_aws_client_config =
+        AwsClientConfig::with_credentials_provider_and_region(credential_provider, Region::UsEast1)?;
+
+    Ok(iam_aws_client_config)
 }
 
 #[derive(Debug, Serialize)]
@@ -70,7 +107,7 @@ pub struct CredentialStats {
     pub failed: usize,
 }
 
-pub fn credentials<T: Bosun>(
+pub fn get_credentials<T: Bosun>(
     aws_client_config: &AwsClientConfig,
     duo_client: &DuoClient,
     config: &CredentialsConfig,
@@ -79,11 +116,11 @@ pub fn credentials<T: Bosun>(
     debug!("Config: {:?}", config);
     let mut credentials = check_duo_credentials(&duo_client).expect("Failed to get Duo credentials");
     debug!("Retrieved DUO credentials: {}", credentials.len());
-    /*
+
     let aws_credentials = check_aws_credentials(&aws_client_config).expect("failed to load credentials");
     debug!("Retrieved AWS credentials: {}", aws_credentials.len());
     credentials.extend(aws_credentials);
-     */
+
     bosun_emit_credential_last_used(bosun, &credentials)?;
 
     debug!("Checking for inactive credentials");

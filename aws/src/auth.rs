@@ -8,9 +8,10 @@ use rusoto_core::{
 };
 use rusoto_sts::{StsAssumeRoleSessionCredentialsProvider, StsClient};
 use std::{path::PathBuf, time::Duration};
+use rusoto_core::credential::StaticProvider;
 
 pub fn create_provider() -> Result<AutoRefreshingProvider<CeresAwsCredentialProvider>, Error> {
-    let ceres_credential_provider = CeresAwsCredentialProvider::new(None)?;
+    let ceres_credential_provider = CeresAwsCredentialProvider::sts(None)?;
     let credentials_provider = AutoRefreshingProvider::new(ceres_credential_provider)?;
 
     Ok(credentials_provider)
@@ -19,7 +20,16 @@ pub fn create_provider() -> Result<AutoRefreshingProvider<CeresAwsCredentialProv
 pub fn create_provider_with_assuem_role(
     sts_config: StsAssumeRoleSessionCredentialsProviderConfig,
 ) -> Result<AutoRefreshingProvider<CeresAwsCredentialProvider>, Error> {
-    let ceres_credential_provider = CeresAwsCredentialProvider::new(sts_config)?;
+    let ceres_credential_provider = CeresAwsCredentialProvider::sts(sts_config)?;
+    let credentials_provider = AutoRefreshingProvider::new(ceres_credential_provider)?;
+
+    Ok(credentials_provider)
+}
+
+pub fn create_provider_with_static_provider(
+    static_provider: StaticProvider,
+) -> Result<AutoRefreshingProvider<CeresAwsCredentialProvider>, Error> {
+    let ceres_credential_provider = CeresAwsCredentialProvider::static_provider(static_provider)?;
     let credentials_provider = AutoRefreshingProvider::new(ceres_credential_provider)?;
 
     Ok(credentials_provider)
@@ -50,16 +60,23 @@ impl StsAssumeRoleSessionCredentialsProviderConfig {
 
 pub struct CeresAwsCredentialProvider {
     sts: Option<StsAssumeRoleSessionCredentialsProvider>,
+    static_provider: Option<StaticProvider>,
     chain: ChainProvider,
 }
 
 impl CeresAwsCredentialProvider {
-    pub fn new<T: Into<Option<StsAssumeRoleSessionCredentialsProviderConfig>>>(sts_config: T) -> Result<Self, Error> {
+    pub fn sts<T: Into<Option<StsAssumeRoleSessionCredentialsProviderConfig>>>(sts_config: T) -> Result<Self, Error> {
         let sts_config = sts_config.into();
         let sts = sts_config.and_then(|x| sts_provider(x.credentials_path, x.profile_name, x.role_arn, x.region).ok());
         let chain = chain_provider()?;
 
-        Ok(CeresAwsCredentialProvider { sts, chain })
+        Ok(CeresAwsCredentialProvider { sts, static_provider: None, chain })
+    }
+
+    pub fn static_provider(static_provider: StaticProvider) -> Result<Self, Error> {
+        let chain = chain_provider()?;
+
+        Ok(CeresAwsCredentialProvider { sts: None, static_provider: Some(static_provider), chain })
     }
 }
 
@@ -100,6 +117,11 @@ impl ProvideAwsCredentials for CeresAwsCredentialProvider {
             let sts_f = sts.credentials();
             let chain_f = self.chain.credentials();
             let f = sts_f.or_else(|_| chain_f);
+            Box::new(f)
+        } else if let Some(ref static_provider) = self.static_provider {
+            let static_provider_f = static_provider.credentials();
+            let chain_f = self.chain.credentials();
+            let f = static_provider_f.or_else(|_| chain_f);
             Box::new(f)
         } else {
             let f = self.chain.credentials();

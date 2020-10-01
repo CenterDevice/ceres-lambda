@@ -1,8 +1,8 @@
 use crate::AwsClientConfig;
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
-use log::{debug, warn};
-use rusoto_iam::{GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersRequest, UpdateAccessKeyRequest, DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest};
+use log::{debug, error, warn};
+use rusoto_iam::{GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersRequest, UpdateAccessKeyRequest, DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest, ListUsersError};
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -43,6 +43,13 @@ pub fn list_users(aws_client_config: &AwsClientConfig) -> Result<Vec<User>, Erro
     };
     let res = iam.list_users(request).sync();
     debug!("Finished list user request; success={}.", res.is_ok());
+    match res {
+        Err(ListUsersError::Unknown(ref buf)) => {
+            let str = String::from_utf8_lossy(&buf.body);
+            error!("Error: {}", str);
+        }
+        _ => {}
+    }
     let res = res.expect("failed to list users");
 
     if log::max_level() >= log::Level::Warn && res.is_truncated.is_some() && res.is_truncated.unwrap() {
