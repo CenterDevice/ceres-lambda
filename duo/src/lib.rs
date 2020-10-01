@@ -156,11 +156,7 @@ impl DuoClient {
         }
     }
 
-    fn delete_duo_api(
-        &self,
-        path: &str,
-        expected: StatusCode,
-    ) -> DuoResult<DuoResponse<()>> {
+    fn delete_duo_api(&self, path: &str, expected: StatusCode) -> DuoResult<DuoResponse<()>> {
         let uri = format!("https://{}{}", self.api_host_name, path);
 
         let req = self
@@ -185,7 +181,6 @@ impl DuoClient {
             Err(err) => Err(DuoError::SendError(format!("{}", err))),
         }
     }
-
 
     fn sign_req(
         &self,
@@ -247,8 +242,8 @@ pub struct User {
 }
 
 fn from_unix_timestamp<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
-    where
-        D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
     let timestamp: Option<i64> = Option::deserialize(deserializer)?;
     let utc = timestamp

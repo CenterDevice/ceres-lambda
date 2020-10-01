@@ -1,5 +1,6 @@
 use failure::Error;
 use futures::future::Future;
+use rusoto_core::credential::StaticProvider;
 use rusoto_core::{
     credential::{
         AutoRefreshingProvider, AwsCredentials, ChainProvider, CredentialsError, ProfileProvider, ProvideAwsCredentials,
@@ -8,7 +9,6 @@ use rusoto_core::{
 };
 use rusoto_sts::{StsAssumeRoleSessionCredentialsProvider, StsClient};
 use std::{path::PathBuf, time::Duration};
-use rusoto_core::credential::StaticProvider;
 
 pub fn create_provider() -> Result<AutoRefreshingProvider<CeresAwsCredentialProvider>, Error> {
     let ceres_credential_provider = CeresAwsCredentialProvider::sts(None)?;
@@ -70,13 +70,21 @@ impl CeresAwsCredentialProvider {
         let sts = sts_config.and_then(|x| sts_provider(x.credentials_path, x.profile_name, x.role_arn, x.region).ok());
         let chain = chain_provider()?;
 
-        Ok(CeresAwsCredentialProvider { sts, static_provider: None, chain })
+        Ok(CeresAwsCredentialProvider {
+            sts,
+            static_provider: None,
+            chain,
+        })
     }
 
     pub fn static_provider(static_provider: StaticProvider) -> Result<Self, Error> {
         let chain = chain_provider()?;
 
-        Ok(CeresAwsCredentialProvider { sts: None, static_provider: Some(static_provider), chain })
+        Ok(CeresAwsCredentialProvider {
+            sts: None,
+            static_provider: Some(static_provider),
+            chain,
+        })
     }
 }
 

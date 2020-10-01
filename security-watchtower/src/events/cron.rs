@@ -2,7 +2,7 @@ use chrono::Utc;
 use failure::{Error, Fail};
 use lambda_runtime::Context;
 use log::{debug, error, info, trace};
-use rusoto_sts::{StsClient, Sts, AssumeRoleRequest, AssumeRoleError};
+use rusoto_sts::{AssumeRoleError, AssumeRoleRequest, Sts, StsClient};
 use serde_derive::{Deserialize, Serialize};
 
 use aws::AwsClientConfig;
@@ -16,10 +16,10 @@ use crate::check_credentials::{
 use crate::config::{CredentialsConfig, FunctionConfig};
 use crate::events::HandleResult;
 use crate::metrics;
-use aws::auth::{create_provider_with_static_provider};
-use rusoto_core::Region;
-use rusoto_core::credential::StaticProvider;
+use aws::auth::create_provider_with_static_provider;
 use lambda::error::LambdaError;
+use rusoto_core::credential::StaticProvider;
+use rusoto_core::Region;
 
 // cf. https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html
 // {
@@ -59,7 +59,8 @@ pub fn handle<T: Bosun>(
         &config.duo.secret_key,
     )?;
 
-    let iam_role_arn = std::env::var("CD_IAM_ROLE_ARN").map_err(|e| e.context(LambdaError::FailedEnvVar("CD_IAM_ROLE_ARN")))?;
+    let iam_role_arn =
+        std::env::var("CD_IAM_ROLE_ARN").map_err(|e| e.context(LambdaError::FailedEnvVar("CD_IAM_ROLE_ARN")))?;
     let iam_aws_client_config = assume_iam_role(iam_role_arn)?;
 
     let credentials = get_credentials(&iam_aws_client_config, &duo_client, &config.credentials, bosun)?;
@@ -71,19 +72,18 @@ pub fn handle<T: Bosun>(
 
 fn assume_iam_role(iam_role_arn: String) -> Result<AwsClientConfig, Error> {
     let sts = StsClient::new(Region::UsEast1);
-    let credentials = sts.assume_role(AssumeRoleRequest {
-        role_arn: iam_role_arn,
-        role_session_name: "Lambda2Iam".to_string(),
-        ..Default::default()
-    }).sync();
-    match credentials {
-        Err(AssumeRoleError::Unknown(ref buf)) => {
+    let res = sts
+        .assume_role(AssumeRoleRequest {
+            role_arn: iam_role_arn,
+            role_session_name: "Lambda2Iam".to_string(),
+            ..Default::default()
+        })
+        .sync();
+    if let Err(AssumeRoleError::Unknown(ref buf)) = res {
             let str = String::from_utf8_lossy(&buf.body);
             error!("Error: {}", str);
-        }
-        _ => {}
     }
-    let credentials = credentials?.credentials.unwrap(); // Safe unwrap, because the call was successfull
+    let credentials = res?.credentials.unwrap(); // Safe unwrap, because the call was successfull
     let static_provider = StaticProvider::new(
         credentials.access_key_id,
         credentials.secret_access_key,

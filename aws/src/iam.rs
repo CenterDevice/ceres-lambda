@@ -2,7 +2,10 @@ use crate::AwsClientConfig;
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 use log::{debug, error, warn};
-use rusoto_iam::{GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersRequest, UpdateAccessKeyRequest, DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest, ListUsersError};
+use rusoto_iam::{
+    DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest, GetAccessKeyLastUsedRequest, Iam, IamClient,
+    ListAccessKeysRequest, ListUsersError, ListUsersRequest, UpdateAccessKeyRequest,
+};
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -43,12 +46,9 @@ pub fn list_users(aws_client_config: &AwsClientConfig) -> Result<Vec<User>, Erro
     };
     let res = iam.list_users(request).sync();
     debug!("Finished list user request; success={}.", res.is_ok());
-    match res {
-        Err(ListUsersError::Unknown(ref buf)) => {
+    if let Err(ListUsersError::Unknown(ref buf)) = res {
             let str = String::from_utf8_lossy(&buf.body);
             error!("Error: {}", str);
-        }
-        _ => {}
     }
     let res = res.expect("failed to list users");
 
@@ -139,8 +139,11 @@ pub fn list_access_keys_for_user(
         warn!("List users: Result is truncated.");
     }
 
-    let res: Vec<Result<AccessKeyMetadata, Error>> =
-        res.access_key_metadata.into_iter().map(|x| AccessKeyMetadata::try_from(user.user_id.clone(), x)).collect();
+    let res: Vec<Result<AccessKeyMetadata, Error>> = res
+        .access_key_metadata
+        .into_iter()
+        .map(|x| AccessKeyMetadata::try_from(user.user_id.clone(), x))
+        .collect();
     let res: Result<Vec<AccessKeyMetadata>, Error> = res.into_iter().collect();
 
     res
@@ -177,7 +180,7 @@ impl AccessKeyLastUsed {
 
 pub fn list_access_last_used(
     aws_client_config: &AwsClientConfig,
-    access_key: AccessKeyMetadata
+    access_key: AccessKeyMetadata,
 ) -> Result<AccessKeyLastUsed, Error> {
     debug!("Get access key last used for key '{}'", &access_key.key_id);
 
@@ -214,7 +217,7 @@ pub fn disable_access_key(
     let request = UpdateAccessKeyRequest {
         access_key_id: access_key_id.clone(),
         status: "Inactive".to_string(),
-        user_name: Some(user_name.clone())
+        user_name: Some(user_name.clone()),
     };
 
     let res = iam.update_access_key(request).sync();
@@ -224,9 +227,9 @@ pub fn disable_access_key(
         &user_name,
         res.is_ok()
     );
-    let res = res?;
+    res?;
 
-    Ok(res)
+    Ok(())
 }
 
 pub fn delete_access_key(
@@ -242,7 +245,7 @@ pub fn delete_access_key(
 
     let request = DeleteAccessKeyRequest {
         access_key_id: access_key_id.clone(),
-        user_name: Some(user_name.clone())
+        user_name: Some(user_name.clone()),
     };
 
     let res = iam.delete_access_key(request).sync();
@@ -252,15 +255,12 @@ pub fn delete_access_key(
         &user_name,
         res.is_ok()
     );
-    let res = res?;
+    res?;
 
-    Ok(res)
+    Ok(())
 }
 
-pub fn disable_user(
-    aws_client_config: &AwsClientConfig,
-    user_name: String,
-) -> Result<(), Error> {
+pub fn disable_user(aws_client_config: &AwsClientConfig, user_name: String) -> Result<(), Error> {
     debug!("Deleting password of user '{}'", &user_name);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
@@ -277,15 +277,12 @@ pub fn disable_user(
         &user_name,
         res.is_ok()
     );
-    let res = res?;
+    res?;
 
-    Ok(res)
+    Ok(())
 }
 
-pub fn delete_user(
-    aws_client_config: &AwsClientConfig,
-    user_name: String,
-) -> Result<(), Error> {
+pub fn delete_user(aws_client_config: &AwsClientConfig, user_name: String) -> Result<(), Error> {
     debug!("Deleting user '{}'", &user_name);
 
     let credentials_provider = aws_client_config.credentials_provider.clone();
@@ -297,12 +294,8 @@ pub fn delete_user(
     };
 
     let res = iam.delete_user(request).sync();
-    debug!(
-        "Finished deleting user '{}'; success={}.",
-        &user_name,
-        res.is_ok()
-    );
-    let res = res?;
+    debug!("Finished deleting user '{}'; success={}.", &user_name, res.is_ok());
+    res?;
 
-    Ok(res)
+    Ok(())
 }
