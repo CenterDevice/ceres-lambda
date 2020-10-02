@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use failure::Fail;
-use log::{debug, trace};
+use log::{debug, info, trace};
 use reqwest::{Method, RequestBuilder, StatusCode};
 use ring::hmac;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
@@ -164,11 +164,11 @@ impl DuoClient {
             .delete(&uri)
             .header("Content-Type", "application/x-www-form-urlencoded");
         let params = HashMap::new();
-        let req = self.sign_req(req, Method::POST, path, &params);
+        let req = self.sign_req(req, Method::DELETE, path, &params);
         debug!("Request: '{:?}'", req);
 
         let res = req.send();
-        match res {
+        let res = match res {
             Ok(mut response) if response.status() == expected => {
                 let text = response
                     .text()
@@ -179,7 +179,10 @@ impl DuoClient {
             }
             Ok(response) => Err(DuoError::ReceiveError(format!("{}", response.status()))),
             Err(err) => Err(DuoError::SendError(format!("{}", err))),
-        }
+        };
+
+        info!("Duo result: {:?}", res);
+        res
     }
 
     fn sign_req(

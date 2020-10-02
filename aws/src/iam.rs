@@ -2,10 +2,7 @@ use crate::AwsClientConfig;
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 use log::{debug, error, warn};
-use rusoto_iam::{
-    DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest, GetAccessKeyLastUsedRequest, Iam, IamClient,
-    ListAccessKeysRequest, ListUsersError, ListUsersRequest, UpdateAccessKeyRequest,
-};
+use rusoto_iam::{DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest, GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersError, ListUsersRequest, UpdateAccessKeyRequest, DeleteAccessKeyError};
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -227,6 +224,9 @@ pub fn disable_access_key(
         &user_name,
         res.is_ok()
     );
+    if let Err(ref err) = res {
+        error!("Disable key error: {:?}", err);
+    }
     res?;
 
     Ok(())
@@ -255,6 +255,14 @@ pub fn delete_access_key(
         &user_name,
         res.is_ok()
     );
+    if let Err(ref err) = res {
+        if let DeleteAccessKeyError::Unknown(ref buf) = err {
+            let msg = String::from_utf8_lossy(&buf.body);
+            error!("Delete key error: {:?}", msg);
+        } else {
+            error!("Delete key error: {:?}", err);
+        }
+    }
     res?;
 
     Ok(())
@@ -277,6 +285,9 @@ pub fn disable_user(aws_client_config: &AwsClientConfig, user_name: String) -> R
         &user_name,
         res.is_ok()
     );
+    if let Err(ref err) = res {
+        error!("Disable user error: {:?}", err);
+    }
     res?;
 
     Ok(())
@@ -295,6 +306,9 @@ pub fn delete_user(aws_client_config: &AwsClientConfig, user_name: String) -> Re
 
     let res = iam.delete_user(request).sync();
     debug!("Finished deleting user '{}'; success={}.", &user_name, res.is_ok());
+    if let Err(ref err) = res {
+        error!("Delete user error: {:?}", err);
+    }
     res?;
 
     Ok(())

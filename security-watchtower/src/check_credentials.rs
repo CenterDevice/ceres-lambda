@@ -3,7 +3,7 @@ use std::fmt;
 
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
-use log::info;
+use log::{error, info};
 
 use aws::iam;
 use aws::iam::{AccessKeyLastUsed, AccessKeyMetadataStatus};
@@ -358,6 +358,7 @@ impl<T> ToUnitResult for DuoResponse<T> {
                     "Duo call failed (code: {}) because {}, {}",
                     code, message, message_detail
                 );
+                error!("Duo call failed: {}", msg);
                 Err(err_msg(msg))
             }
         }
