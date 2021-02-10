@@ -59,6 +59,7 @@ pub enum VolumeEventType {
     CreateSnapshot,
     CreateVolume,
     DeleteVolume,
+    ModifyVolume,
     ReattachVolume,
     ShareSnapshot,
 }
@@ -71,6 +72,7 @@ impl fmt::Display for VolumeEventType {
             VolumeEventType::CreateSnapshot => "create_snapshot",
             VolumeEventType::CreateVolume => "create_volume",
             VolumeEventType::DeleteVolume => "delete_volume",
+            VolumeEventType::ModifyVolume => "modify_volume",
             VolumeEventType::ReattachVolume => "reattach_volume",
             VolumeEventType::ShareSnapshot => "share_snapshot",
         };
@@ -82,8 +84,10 @@ impl fmt::Display for VolumeEventType {
 #[serde(rename_all = "lowercase")]
 pub enum VolumeResult {
     Available,
+    Completed,
     Deleted,
     Failed,
+    Optimizing,
     Succeeded,
 }
 
@@ -91,8 +95,10 @@ impl fmt::Display for VolumeResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let output = match self {
             VolumeResult::Available => "available",
+            VolumeResult::Completed => "completed",
             VolumeResult::Deleted => "deleted",
             VolumeResult::Failed => "failed",
+            VolumeResult::Optimizing => "optimizing",
             VolumeResult::Succeeded => "succeeded",
         };
         write!(f, "{}", output)
@@ -204,6 +210,58 @@ mod tests {
       "result": "failed",
       "cause": "arn:aws:kms:sa-east-1:0123456789ab:key/01234567-0123-0123-0123-0123456789ab is pending import.",
       "event": "createVolume",
+      "request-id": "01234567-0123-0123-0123-0123456789ab"
+   }
+}"#;
+
+        let event: Result<VolumeEvent, _> = serde_json::from_str(json);
+
+        assert_that(&event).is_ok();
+    }
+
+    #[test]
+    fn test_deserialize_modify_volume_event_result_is_optimizing() {
+        let json = r#"{
+   "version": "0",
+   "id": "01234567-0123-0123-0123-012345678901",
+   "detail-type": "EBS Volume Notification",
+   "source": "aws.ec2",
+   "account": "012345678901",
+   "time": "yyyy-mm-ddThh:mm:ssZ",
+   "region": "us-east-1",
+   "resources": [
+      "arn:aws:ec2:us-east-1:012345678901:volume/vol-01234567"
+   ],
+   "detail": {
+      "result": "optimizing",
+      "cause": "",
+      "event": "modifyVolume",
+      "request-id": "01234567-0123-0123-0123-0123456789ab"
+   }
+}"#;
+
+        let event: Result<VolumeEvent, _> = serde_json::from_str(json);
+
+        assert_that(&event).is_ok();
+    }
+
+    #[test]
+    fn test_deserialize_modify_volume_event_result_is_completed() {
+        let json = r#"{
+   "version": "0",
+   "id": "01234567-0123-0123-0123-012345678901",
+   "detail-type": "EBS Volume Notification",
+   "source": "aws.ec2",
+   "account": "012345678901",
+   "time": "yyyy-mm-ddThh:mm:ssZ",
+   "region": "us-east-1",
+   "resources": [
+      "arn:aws:ec2:us-east-1:012345678901:volume/vol-01234567"
+   ],
+   "detail": {
+      "result": "completed",
+      "cause": "",
+      "event": "modifyVolume",
       "request-id": "01234567-0123-0123-0123-0123456789ab"
    }
 }"#;
