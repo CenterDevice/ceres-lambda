@@ -288,6 +288,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66120af515773fb005778dc07c261bd201ec8ce50bd6e7144c927753fe013381"
 
 [[package]]
+name = "centerdevice-watchtower"
+version = "0.1.0"
+dependencies = [
+ "aws",
+ "bosun",
+ "chrono",
+ "clams",
+ "clams-derive",
+ "dirs 3.0.0",
+ "env_logger",
+ "failure",
+ "failure_derive",
+ "lambda",
+ "lambda_runtime",
+ "lazy_static 1.4.0",
+ "linreg",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "spectral",
+ "structopt",
+ "testing",
+ "toml",
+ "vergen",
+]
+
+[[package]]
 name = "cfg-if"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"

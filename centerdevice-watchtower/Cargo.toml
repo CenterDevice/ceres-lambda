@@ -1,0 +1,54 @@
+[package]
+name = "centerdevice-watchtower"
+version = "0.1.0"
+authors = ["Lukas Pustina <lukas.pustina@centerdevice.com>"]
+build = "build.rs"
+
+edition = "2018"
+
+
+[[bin]]
+name = "centerdevice-watchtower"
+path = "src/bin/centerdevice-watchtower.rs"
+
+[[bin]]
+name = "validate-config-watchtower"
+path = "src/bin/validate-config.rs"
+
+[lib]
+name = "centerdevice_watchtower"
+path = "src/lib.rs"
+
+[dependencies]
+aws = { version = "0.0.3", path = "../aws" }
+clams = "0.0.13"
+clams-derive = "^0.0.4"
+bosun = { version = "0.0.2", path = "../bosun" }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "3"
+env_logger = "0.6"
+failure = "0.1"
+failure_derive = "0.1"
+lambda_runtime = "0.1"
+lambda = { version = "0.1.0", path = "../lambda" }
+lazy_static = "1.2"
+linreg = "0.2"
+log = "0.4"
+reqwest = "0.9"
+serde = "1"
+serde_derive = "1"
+serde_json = "1"
+structopt = "0.2"
+toml = "0.4"
+
+[dev-dependencies]
+spectral = "^0.6"
+testing = { version = "0.0.1", path = "../testing" }
+
+[build-dependencies]
+vergen = "3"
+
+# Enable Debug Symbols in Release build
+#[profile.release]
+#debug = true
+

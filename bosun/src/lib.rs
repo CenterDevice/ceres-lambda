@@ -84,7 +84,7 @@ impl Bosun for BosunClient {
     }
 
     fn send_to_bosun_api(&self, path: &str, json: &str, expected: StatusCode) -> BosunResult {
-        let uri = if self.host.starts_with("http") {
+       let uri = if self.host.starts_with("http") {
             format!("{}{}", self.host, path)
         } else {
             format!("http://{}{}", self.host, path)

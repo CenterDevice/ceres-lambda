@@ -4,6 +4,7 @@ members = [
   "aws-scaletower",
   "aws-watchtower",
   "bosun",
+  "centerdevice-watchtower",
   "security-watchtower",
   "duo",
   "lambda",
