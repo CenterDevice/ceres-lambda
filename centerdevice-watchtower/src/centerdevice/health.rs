@@ -8,6 +8,8 @@ use crate::config::CenterDeviceHealthConfig;
 use failure::Error;
 use std::time::Duration;
 
+const REQ_TIMEOUT: u64 = 5;
+
 pub const ENDPOINTS: &[&str] = &[
    "admin",
    "api",
@@ -46,7 +48,7 @@ pub fn health_check(config: &CenterDeviceHealthConfig) -> Result<Vec<HealthCheck
    info!("Checking Health");
 
    let client = reqwest::Client::builder()
-       .timeout(Duration::from_secs(5))
+       .timeout(Duration::from_secs(REQ_TIMEOUT))
        .build()
        .map_err(|e| failure::err_msg(format!("failed to build http client because {}", e.to_string())))?;
 
@@ -83,7 +85,8 @@ fn query_health(client: &ReqwestClient, service: &'static str, url: &str) -> Res
 
          Ok(data)
       }
-      Ok(response) => Err(failure::err_msg(format!("Unexpected status code (200): {}", response.status()))),
+      Ok(response) => Ok(HealthCheck{ service: service.to_string(), result: HealthCheckResult::Failed(format!("Unexpected status code (200): {}", response.status())) }),
+      Err(err) if err.is_timeout() => Ok(HealthCheck{ service: service.to_string(), result: HealthCheckResult::Failed(format!("Timeout ({} sec): {}", REQ_TIMEOUT, err)) }),
       Err(err) => Err(failure::err_msg(err)),
    }
 }
