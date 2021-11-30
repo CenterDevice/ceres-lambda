@@ -17,10 +17,10 @@ use crate::config::{CredentialsConfig, FunctionConfig};
 use crate::events::HandleResult;
 use crate::metrics;
 use aws::auth::create_provider_with_static_provider;
+use failure::_core::time::Duration;
 use lambda::error::LambdaError;
 use rusoto_core::credential::StaticProvider;
 use rusoto_core::Region;
-use failure::_core::time::Duration;
 
 // cf. https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents.html
 // {
