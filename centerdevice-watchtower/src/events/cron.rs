@@ -7,7 +7,7 @@ use aws::AwsClientConfig;
 use bosun::{Bosun, Datum, Tags};
 
 use crate::centerdevice::health::{self, HealthCheck, HealthCheckResult, HealthSamples};
-use crate::config::{CenterDeviceHealthConfig, FunctionConfig};
+use crate::config::{FunctionConfig, CenterDeviceHealthConfig};
 use crate::events::HandleResult;
 use crate::metrics;
 
@@ -45,14 +45,16 @@ pub fn handle<T: Bosun>(
 
     let centerdevice_healthchecks = centerdevice_health(&config.centerdevice_health, bosun)?;
 
-    let handle_result = HandleResult::Cron {
-        centerdevice_healthchecks,
-    };
+    let handle_result = HandleResult::Cron { centerdevice_healthchecks };
 
     Ok(handle_result)
 }
 
-pub fn centerdevice_health<T: Bosun>(config: &CenterDeviceHealthConfig, bosun: &T) -> Result<usize, Error> {
+pub fn centerdevice_health<T: Bosun>(
+    config: &CenterDeviceHealthConfig,
+    bosun: &T,
+) -> Result<usize, Error> {
+
     let healthchecks = health::health_check(config)?;
     debug!("Received health checks: {:?}", healthchecks);
 
@@ -78,7 +80,11 @@ fn bosun_emit_health_samples<T: Bosun>(bosun: &T, service: &str, samples: &Healt
         tags.insert("service".to_string(), service.to_string());
         tags.insert("resource".to_string(), resource.clone());
 
-        let value = if sample.healthy { "1" } else { "0" };
+        let value = if sample.healthy {
+            "1"
+        } else {
+            "0"
+        };
 
         let datum = if let Some(timestamp) = sample.time_stamp {
             Datum::new(metrics::CENTERDEVICE_HEALTH, timestamp, &value, &tags)
