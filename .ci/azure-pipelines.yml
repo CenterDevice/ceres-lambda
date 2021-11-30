@@ -59,7 +59,9 @@ stages:
         steps:
           # Azure is not using the designated user of the image that has been configured to execute Rust
           - script: |
-              cp -r /home/rust/.cargo /home/rust/.rustup $HOME
+              cp -r /home/rust/.cargo $HOME
+              # .rustup does not exist on newer builder images
+              cp -r /home/rust/.rustup $HOME || true
             displayName: Prepare Container
           - template: templates/version_information.yml
           - script: make audit
@@ -105,7 +107,9 @@ stages:
           - template: templates/install_dependencies.yml
           # Azure is not using the designated user of the image that has been configured to execute Rust
           - script: |
-              cp -r /home/rust/.cargo /home/rust/.rustup $HOME
+              cp -r /home/rust/.cargo $HOME
+              # .rustup does not exist on newer builder images
+              cp -r /home/rust/.rustup $HOME || true
             displayName: Prepare Container
           - template: templates/version_information.yml
           - script: |
@@ -130,7 +134,9 @@ stages:
         steps:
           # Azure is not using the designated user of the image that has been configured to execute Rust
           - script: |
-              cp -r /home/rust/.cargo /home/rust/.rustup $HOME
+              cp -r /home/rust/.cargo $HOME
+              # .rustup does not exist on newer builder images
+              cp -r /home/rust/.rustup $HOME || true
             displayName: Prepare Container
           - template: templates/version_information.yml
           - script: |
