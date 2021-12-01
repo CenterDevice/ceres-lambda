@@ -2,7 +2,11 @@ use crate::AwsClientConfig;
 use chrono::{DateTime, Utc};
 use failure::{err_msg, Error};
 use log::{debug, error, warn};
-use rusoto_iam::{DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest, GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersError, ListUsersRequest, UpdateAccessKeyRequest, DeleteAccessKeyError};
+use rusoto_iam::{
+    DeleteAccessKeyError, DeleteAccessKeyRequest, DeleteLoginProfileRequest, DeleteUserRequest,
+    GetAccessKeyLastUsedRequest, Iam, IamClient, ListAccessKeysRequest, ListUsersError, ListUsersRequest,
+    UpdateAccessKeyRequest,
+};
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -44,8 +48,8 @@ pub fn list_users(aws_client_config: &AwsClientConfig) -> Result<Vec<User>, Erro
     let res = iam.list_users(request).sync();
     debug!("Finished list user request; success={}.", res.is_ok());
     if let Err(ListUsersError::Unknown(ref buf)) = res {
-            let str = String::from_utf8_lossy(&buf.body);
-            error!("Error: {}", str);
+        let str = String::from_utf8_lossy(&buf.body);
+        error!("Error: {}", str);
     }
     let res = res.expect("failed to list users");
 

@@ -54,7 +54,10 @@ impl Default for FunctionConfig {
             base_domain: "centerdevice.de".to_string(),
         };
 
-        FunctionConfig { bosun, centerdevice_health }
+        FunctionConfig {
+            bosun,
+            centerdevice_health,
+        }
     }
 }
 
