@@ -43,29 +43,29 @@ stages:
           - script: make fmt-check
             displayName: Run Fmt
 
-      - job: Audit
-        strategy:
-          matrix:
-            linux-stable:
-              imageName: ${{ variables.linux_image_name }}
-              rustup_toolchain: stable
-        pool:
-          vmImage: $(imageName)
-        # Let's use this image, because it has cargo audit already installed.
-        container:
-          image: ekidd/rust-musl-builder:$(rustup_toolchain)
-          # Required, because Azure is going to add a user which requires root privileges
-          options: --user 0:0
-        steps:
-          # Azure is not using the designated user of the image that has been configured to execute Rust
-          - script: |
-              cp -r /home/rust/.cargo $HOME
-              # .rustup does not exist on newer builder images
-              cp -r /home/rust/.rustup $HOME || true
-            displayName: Prepare Container
-          - template: templates/version_information.yml
-          - script: make audit
-            displayName: Run Cargo Audit
+#      - job: Audit
+#        strategy:
+#          matrix:
+#            linux-stable:
+#              imageName: ${{ variables.linux_image_name }}
+#              rustup_toolchain: stable
+#        pool:
+#          vmImage: $(imageName)
+#        # Let's use this image, because it has cargo audit already installed.
+#        container:
+#          image: ekidd/rust-musl-builder:$(rustup_toolchain)
+#          # Required, because Azure is going to add a user which requires root privileges
+#          options: --user 0:0
+#        steps:
+#          # Azure is not using the designated user of the image that has been configured to execute Rust
+#          - script: |
+#              cp -r /home/rust/.cargo $HOME
+#              # .rustup does not exist on newer builder images
+#              cp -r /home/rust/.rustup $HOME || true
+#            displayName: Prepare Container
+#          - template: templates/version_information.yml
+#          - script: make audit
+#            displayName: Run Cargo Audit
 
       - job: Clippy
         strategy:
